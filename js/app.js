@@ -72,7 +72,7 @@
   function normalizeInviteCode(value) {
     return String(value || '')
       .normalize('NFKC')
-      .replace(/\\s+/g, '')
+      .replace(/\s+/g, '')
       .replace(/-/g, '')
       .toUpperCase();
   }
@@ -158,7 +158,9 @@
 
       lockInviteForm();
 
-      setStatus('保護者登録完了');
+      setStatus(
+        '保護者登録完了'
+      );
 
       setInviteStatus(
         '選手との連携が完了しました。'
@@ -182,7 +184,9 @@
   }
 
   async function start() {
-    setStatus('設定を確認しています…');
+    setStatus(
+      '設定を確認しています…'
+    );
 
     if (
       !config ||
@@ -253,14 +257,17 @@
         return;
       }
 
-      currentIdToken = idToken;
+      currentIdToken =
+        idToken;
 
       window.NINJA_GUARDIAN_AUTH =
         Object.freeze({
           idToken: idToken
         });
 
-      setStatus('LINE認証完了');
+      setStatus(
+        'LINE認証完了'
+      );
 
       showInviteRegistration();
 
