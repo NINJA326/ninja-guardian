@@ -69,22 +69,16 @@
     }
   }
 
-  function normalizeInviteCode(
-    value
-  ) {
+  function normalizeInviteCode(value) {
     return String(value || '')
       .normalize('NFKC')
-      .replace(/\s+/g, '')
+      .replace(/\\s+/g, '')
       .replace(/-/g, '')
       .toUpperCase();
   }
 
-  function validateInviteCode(
-    value
-  ) {
-    return /^[A-Z0-9]{10}$/.test(
-      value
-    );
+  function validateInviteCode(value) {
+    return /^[A-Z0-9]{10}$/.test(value);
   }
 
   function showInviteRegistration() {
@@ -107,9 +101,7 @@
     }
   }
 
-  async function claimInvite(
-    inviteCode
-  ) {
+  async function claimInvite(inviteCode) {
     if (!api || !api.post) {
       throw new Error(
         'API機能を読み込めませんでした。'
@@ -131,9 +123,7 @@
     );
   }
 
-  async function handleInviteSubmit(
-    event
-  ) {
+  async function handleInviteSubmit(event) {
     event.preventDefault();
 
     const inviteCode =
@@ -143,15 +133,10 @@
           : ''
       );
 
-    if (
-      !validateInviteCode(
-        inviteCode
-      )
-    ) {
+    if (!validateInviteCode(inviteCode)) {
       setInviteStatus(
         '10文字の招待コードを入力してください。'
       );
-
       return;
     }
 
@@ -169,15 +154,11 @@
     );
 
     try {
-      await claimInvite(
-        inviteCode
-      );
+      await claimInvite(inviteCode);
 
       lockInviteForm();
 
-      setStatus(
-        '保護者登録完了'
-      );
+      setStatus('保護者登録完了');
 
       setInviteStatus(
         '選手との連携が完了しました。'
@@ -188,8 +169,7 @@
       }
 
       setInviteStatus(
-        error &&
-        error.message
+        error && error.message
           ? error.message
           : '保護者登録に失敗しました。'
       );
@@ -202,9 +182,7 @@
   }
 
   async function start() {
-    setStatus(
-      '設定を確認しています…'
-    );
+    setStatus('設定を確認しています…');
 
     if (
       !config ||
@@ -214,7 +192,6 @@
       fail(
         '設定を読み込めませんでした。'
       );
-
       return;
     }
 
@@ -222,7 +199,6 @@
       fail(
         'API機能を読み込めませんでした。'
       );
-
       return;
     }
 
@@ -234,7 +210,6 @@
       fail(
         'LINE認証機能を読み込めませんでした。'
       );
-
       return;
     }
 
@@ -251,9 +226,7 @@
         'LINEログイン状態を確認しています…'
       );
 
-      if (
-        !window.liff.isLoggedIn()
-      ) {
+      if (!window.liff.isLoggedIn()) {
         setStatus(
           'LINEログインへ移動します…'
         );
@@ -277,7 +250,6 @@
         fail(
           'LINE認証情報を取得できませんでした。'
         );
-
         return;
       }
 
@@ -288,9 +260,7 @@
           idToken: idToken
         });
 
-      setStatus(
-        'LINE認証完了'
-      );
+      setStatus('LINE認証完了');
 
       showInviteRegistration();
 
