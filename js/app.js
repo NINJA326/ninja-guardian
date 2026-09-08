@@ -21,10 +21,14 @@
   }
 
   async function start() {
+    setStatus('設定を確認しています…');
+
     if (!config || !config.LIFF_ID || !config.API_URL) {
       fail('設定を読み込めませんでした。');
       return;
     }
+
+    setStatus('LIFF SDKを確認しています…');
 
     if (!window.liff) {
       fail('LINE認証機能を読み込めませんでした。');
@@ -32,9 +36,13 @@
     }
 
     try {
+      setStatus('LIFFを初期化しています…');
+
       await window.liff.init({
         liffId: config.LIFF_ID
       });
+
+      setStatus('LINEログイン状態を確認しています…');
 
       if (!window.liff.isLoggedIn()) {
         setStatus('LINEログインへ移動します…');
@@ -45,6 +53,8 @@
 
         return;
       }
+
+      setStatus('LINE認証情報を取得しています…');
 
       const idToken = window.liff.getIDToken();
 
@@ -60,4 +70,22 @@
       setStatus('LINE認証完了');
 
       console.info(
-        '[NINJA
+        '[NINJA Guardian]',
+        config.APP_VERSION,
+        {
+          liffReady: true,
+          loggedIn: true,
+          idTokenAvailable: true,
+          idTokenLogged: false
+        }
+      );
+    } catch (error) {
+      fail(
+        'LINE認証に失敗しました。',
+        error
+      );
+    }
+  }
+
+  start();
+})();
