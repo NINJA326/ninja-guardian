@@ -2,22 +2,62 @@
 
 (function bootstrapGuardianApp() {
   const config = window.NINJA_GUARDIAN_CONFIG;
-  const status = document.getElementById('app-status');
+  const statusElement = document.getElementById('app-status');
 
-  if (!config || !config.API_URL) {
-    if (status) {
-      status.textContent = '設定を読み込めませんでした。';
+  function setStatus(message) {
+    if (statusElement) {
+      statusElement.textContent = message;
     }
-    console.error('NINJA_GUARDIAN_CONFIG is missing.');
-    return;
   }
 
-  if (status) {
-    status.textContent = '起動準備完了';
+  function fail(message, error) {
+    setStatus(message);
+
+    if (error) {
+      console.error('[NINJA Guardian]', error);
+    } else {
+      console.error('[NINJA Guardian]', message);
+    }
   }
 
-  console.info(
-    '[NINJA Guardian]',
-    config.APP_VERSION
-  );
-})();
+  async function start() {
+    if (!config || !config.LIFF_ID || !config.API_URL) {
+      fail('設定を読み込めませんでした。');
+      return;
+    }
+
+    if (!window.liff) {
+      fail('LINE認証機能を読み込めませんでした。');
+      return;
+    }
+
+    try {
+      await window.liff.init({
+        liffId: config.LIFF_ID
+      });
+
+      if (!window.liff.isLoggedIn()) {
+        setStatus('LINEログインへ移動します…');
+
+        window.liff.login({
+          redirectUri: window.location.href
+        });
+
+        return;
+      }
+
+      const idToken = window.liff.getIDToken();
+
+      if (!idToken) {
+        fail('LINE認証情報を取得できませんでした。');
+        return;
+      }
+
+      window.NINJA_GUARDIAN_AUTH = Object.freeze({
+        idToken: idToken
+      });
+
+      setStatus('LINE認証完了');
+
+      console.info(
+        '[NINJA
