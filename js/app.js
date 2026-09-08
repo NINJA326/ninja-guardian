@@ -1,12 +1,55 @@
 'use strict';
 
 (function bootstrapGuardianApp() {
-  const config = window.NINJA_GUARDIAN_CONFIG;
-  const statusElement = document.getElementById('app-status');
+  const config =
+    window.NINJA_GUARDIAN_CONFIG;
+
+  const api =
+    window.NINJA_GUARDIAN_API;
+
+  const statusElement =
+    document.getElementById(
+      'app-status'
+    );
+
+  const inviteSection =
+    document.getElementById(
+      'invite-section'
+    );
+
+  const inviteForm =
+    document.getElementById(
+      'invite-form'
+    );
+
+  const inviteCodeElement =
+    document.getElementById(
+      'invite-code'
+    );
+
+  const inviteSubmit =
+    document.getElementById(
+      'invite-submit'
+    );
+
+  const inviteStatus =
+    document.getElementById(
+      'invite-status'
+    );
+
+  let currentIdToken = '';
 
   function setStatus(message) {
     if (statusElement) {
-      statusElement.textContent = message;
+      statusElement.textContent =
+        message || '';
+    }
+  }
+
+  function setInviteStatus(message) {
+    if (inviteStatus) {
+      inviteStatus.textContent =
+        message || '';
     }
   }
 
@@ -14,60 +57,242 @@
     setStatus(message);
 
     if (error) {
-      console.error('[NINJA Guardian]', error);
+      console.error(
+        '[NINJA Guardian]',
+        error
+      );
     } else {
-      console.error('[NINJA Guardian]', message);
+      console.error(
+        '[NINJA Guardian]',
+        message
+      );
+    }
+  }
+
+  function normalizeInviteCode(
+    value
+  ) {
+    return String(value || '')
+      .normalize('NFKC')
+      .replace(/\s+/g, '')
+      .replace(/-/g, '')
+      .toUpperCase();
+  }
+
+  function validateInviteCode(
+    value
+  ) {
+    return /^[A-Z0-9]{10}$/.test(
+      value
+    );
+  }
+
+  function showInviteRegistration() {
+    if (inviteSection) {
+      inviteSection.hidden = false;
+    }
+
+    if (inviteCodeElement) {
+      inviteCodeElement.focus();
+    }
+  }
+
+  function lockInviteForm() {
+    if (inviteCodeElement) {
+      inviteCodeElement.disabled = true;
+    }
+
+    if (inviteSubmit) {
+      inviteSubmit.disabled = true;
+    }
+  }
+
+  async function claimInvite(
+    inviteCode
+  ) {
+    if (!api || !api.post) {
+      throw new Error(
+        'API機能を読み込めませんでした。'
+      );
+    }
+
+    if (!currentIdToken) {
+      throw new Error(
+        'LINE認証情報がありません。'
+      );
+    }
+
+    return api.post(
+      'guardianInvite.claim',
+      {
+        idToken: currentIdToken,
+        inviteCode: inviteCode
+      }
+    );
+  }
+
+  async function handleInviteSubmit(
+    event
+  ) {
+    event.preventDefault();
+
+    const inviteCode =
+      normalizeInviteCode(
+        inviteCodeElement
+          ? inviteCodeElement.value
+          : ''
+      );
+
+    if (
+      !validateInviteCode(
+        inviteCode
+      )
+    ) {
+      setInviteStatus(
+        '10文字の招待コードを入力してください。'
+      );
+
+      return;
+    }
+
+    if (inviteCodeElement) {
+      inviteCodeElement.value =
+        inviteCode;
+    }
+
+    if (inviteSubmit) {
+      inviteSubmit.disabled = true;
+    }
+
+    setInviteStatus(
+      '保護者登録を確認しています…'
+    );
+
+    try {
+      await claimInvite(
+        inviteCode
+      );
+
+      lockInviteForm();
+
+      setStatus(
+        '保護者登録完了'
+      );
+
+      setInviteStatus(
+        '選手との連携が完了しました。'
+      );
+    } catch (error) {
+      if (inviteSubmit) {
+        inviteSubmit.disabled = false;
+      }
+
+      setInviteStatus(
+        error &&
+        error.message
+          ? error.message
+          : '保護者登録に失敗しました。'
+      );
+
+      console.error(
+        '[NINJA Guardian Invite]',
+        error
+      );
     }
   }
 
   async function start() {
-    setStatus('設定を確認しています…');
+    setStatus(
+      '設定を確認しています…'
+    );
 
-    if (!config || !config.LIFF_ID || !config.API_URL) {
-      fail('設定を読み込めませんでした。');
+    if (
+      !config ||
+      !config.LIFF_ID ||
+      !config.API_URL
+    ) {
+      fail(
+        '設定を読み込めませんでした。'
+      );
+
       return;
     }
 
-    setStatus('LIFF SDKを確認しています…');
+    if (!api || !api.post) {
+      fail(
+        'API機能を読み込めませんでした。'
+      );
+
+      return;
+    }
+
+    setStatus(
+      'LIFF SDKを確認しています…'
+    );
 
     if (!window.liff) {
-      fail('LINE認証機能を読み込めませんでした。');
+      fail(
+        'LINE認証機能を読み込めませんでした。'
+      );
+
       return;
     }
 
     try {
-      setStatus('LIFFを初期化しています…');
+      setStatus(
+        'LIFFを初期化しています…'
+      );
 
       await window.liff.init({
         liffId: config.LIFF_ID
       });
 
-      setStatus('LINEログイン状態を確認しています…');
+      setStatus(
+        'LINEログイン状態を確認しています…'
+      );
 
-      if (!window.liff.isLoggedIn()) {
-        setStatus('LINEログインへ移動します…');
+      if (
+        !window.liff.isLoggedIn()
+      ) {
+        setStatus(
+          'LINEログインへ移動します…'
+        );
 
         window.liff.login({
-          redirectUri: window.location.href
+          redirectUri:
+            window.location.href
         });
 
         return;
       }
 
-      setStatus('LINE認証情報を取得しています…');
+      setStatus(
+        'LINE認証情報を取得しています…'
+      );
 
-      const idToken = window.liff.getIDToken();
+      const idToken =
+        window.liff.getIDToken();
 
       if (!idToken) {
-        fail('LINE認証情報を取得できませんでした。');
+        fail(
+          'LINE認証情報を取得できませんでした。'
+        );
+
         return;
       }
 
-      window.NINJA_GUARDIAN_AUTH = Object.freeze({
-        idToken: idToken
-      });
+      currentIdToken = idToken;
 
-      setStatus('LINE認証完了');
+      window.NINJA_GUARDIAN_AUTH =
+        Object.freeze({
+          idToken: idToken
+        });
+
+      setStatus(
+        'LINE認証完了'
+      );
+
+      showInviteRegistration();
 
       console.info(
         '[NINJA Guardian]',
@@ -85,6 +310,13 @@
         error
       );
     }
+  }
+
+  if (inviteForm) {
+    inviteForm.addEventListener(
+      'submit',
+      handleInviteSubmit
+    );
   }
 
   start();
