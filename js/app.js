@@ -107,6 +107,79 @@
     }
   }
 
+  function buildRegisteredPlayerText(players) {
+    if (!Array.isArray(players)) {
+      return '';
+    }
+
+    const validPlayers =
+      players.filter(
+        function(player) {
+          return (
+            player &&
+            String(
+              player.playerName || ''
+            ).trim()
+          );
+        }
+      );
+
+    if (!validPlayers.length) {
+      return '';
+    }
+
+    return validPlayers
+      .map(
+        function(player) {
+          const playerName =
+            String(
+              player.playerName || ''
+            ).trim();
+
+          const category =
+            String(
+              player.category || ''
+            ).trim();
+
+          if (category) {
+            return (
+              playerName +
+              '｜' +
+              category
+            );
+          }
+
+          return playerName;
+        }
+      )
+      .join(' / ');
+  }
+
+  function showRegisteredState(result) {
+    hideInviteRegistration();
+
+    const playerText =
+      buildRegisteredPlayerText(
+        result &&
+        Array.isArray(result.players)
+          ? result.players
+          : []
+      );
+
+    if (playerText) {
+      setStatus(
+        '保護者登録済み　' +
+        playerText
+      );
+
+      return;
+    }
+
+    setStatus(
+      '保護者登録済み'
+    );
+  }
+
   async function getRegistrationStatus() {
     if (!api || !api.post) {
       throw new Error(
@@ -181,16 +254,15 @@
     );
 
     try {
-      await claimInvite(inviteCode);
-
-      lockInviteForm();
-      hideInviteRegistration();
-
-      setStatus(
-        '保護者登録済み'
+      await claimInvite(
+        inviteCode
       );
 
+      lockInviteForm();
+
       setInviteStatus('');
+
+      await applyRegistrationState();
     } catch (error) {
       if (inviteSubmit) {
         inviteSubmit.disabled = false;
@@ -221,10 +293,8 @@
       result &&
       result.registered === true
     ) {
-      hideInviteRegistration();
-
-      setStatus(
-        '保護者登録済み'
+      showRegisteredState(
+        result
       );
 
       return;
