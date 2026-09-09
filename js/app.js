@@ -42,6 +42,11 @@
       'player-detail-category'
     );
 
+  const playerDetailPlaceholder =
+    document.querySelector(
+      '.player-detail-placeholder'
+    );
+
   const inviteSection =
     document.getElementById(
       'invite-section'
@@ -146,6 +151,275 @@
     }
   }
 
+  function setPlayerDetailMessage(message) {
+    if (!playerDetailPlaceholder) {
+      return;
+    }
+
+    playerDetailPlaceholder.replaceChildren();
+
+    const paragraph =
+      document.createElement('p');
+
+    paragraph.textContent =
+      message || '';
+
+    playerDetailPlaceholder.appendChild(
+      paragraph
+    );
+  }
+
+  function formatGrowthValue(
+    value,
+    unit
+  ) {
+    if (
+      value === null ||
+      value === undefined ||
+      value === ''
+    ) {
+      return '未記録';
+    }
+
+    return String(value) + unit;
+  }
+
+  function renderGrowthResult(result) {
+    if (!playerDetailPlaceholder) {
+      return;
+    }
+
+    const data =
+      result &&
+      result.data &&
+      typeof result.data === 'object'
+        ? result.data
+        : {};
+
+    const growth =
+      data.growth &&
+      typeof data.growth === 'object'
+        ? data.growth
+        : {};
+
+    const records =
+      Array.isArray(growth.records)
+        ? growth.records
+        : [];
+
+    if (!records.length) {
+      setPlayerDetailMessage(
+        '身体測定データはまだありません。'
+      );
+
+      return;
+    }
+
+    const sortedRecords =
+      records
+        .slice()
+        .sort(
+          function(a, b) {
+            return String(
+              b && b.date
+                ? b.date
+                : ''
+            ).localeCompare(
+              String(
+                a && a.date
+                  ? a.date
+                  : ''
+              )
+            );
+          }
+        );
+
+    const latest =
+      sortedRecords[0];
+
+    playerDetailPlaceholder.replaceChildren();
+
+    const title =
+      document.createElement('p');
+
+    title.textContent =
+      '身体測定';
+
+    title.style.fontWeight =
+      '700';
+
+    title.style.margin =
+      '0 0 8px';
+
+    const date =
+      document.createElement('p');
+
+    date.textContent =
+      '最新測定日：' +
+      String(
+        latest.date || ''
+      );
+
+    date.style.margin =
+      '0 0 6px';
+
+    const height =
+      document.createElement('p');
+
+    height.textContent =
+      '身長：' +
+      formatGrowthValue(
+        latest.height,
+        'cm'
+      );
+
+    height.style.margin =
+      '0 0 6px';
+
+    const weight =
+      document.createElement('p');
+
+    weight.textContent =
+      '体重：' +
+      formatGrowthValue(
+        latest.weight,
+        'kg'
+      );
+
+    weight.style.margin =
+      '0 0 6px';
+
+    const count =
+      document.createElement('p');
+
+    count.textContent =
+      '記録件数：' +
+      String(records.length) +
+      '件';
+
+    count.style.margin =
+      '0';
+
+    playerDetailPlaceholder.appendChild(
+      title
+    );
+
+    playerDetailPlaceholder.appendChild(
+      date
+    );
+
+    playerDetailPlaceholder.appendChild(
+      height
+    );
+
+    playerDetailPlaceholder.appendChild(
+      weight
+    );
+
+    playerDetailPlaceholder.appendChild(
+      count
+    );
+  }
+
+  async function getPlayerGrowth(
+    playerId
+  ) {
+    if (!api || !api.post) {
+      throw new Error(
+        'API機能を読み込めませんでした。'
+      );
+    }
+
+    if (!currentIdToken) {
+      throw new Error(
+        'LINE認証情報がありません。'
+      );
+    }
+
+    const normalizedPlayerId =
+      String(
+        playerId || ''
+      ).trim();
+
+    if (!normalizedPlayerId) {
+      throw new Error(
+        '選手IDがありません。'
+      );
+    }
+
+    return api.post(
+      'guardian.playerGrowth',
+      {
+        idToken:
+          currentIdToken,
+
+        playerId:
+          normalizedPlayerId
+      }
+    );
+  }
+
+  async function loadPlayerGrowth(
+    playerId
+  ) {
+    setPlayerDetailMessage(
+      '身体測定データを確認しています…'
+    );
+
+    try {
+      const result =
+        await getPlayerGrowth(
+          playerId
+        );
+
+      if (
+        selectedPlayerId !==
+        String(
+          playerId || ''
+        ).trim()
+      ) {
+        return;
+      }
+
+      renderGrowthResult(
+        result
+      );
+
+      console.info(
+        '[NINJA Guardian Growth]',
+        {
+          success: true,
+          playerId:
+            String(
+              playerId || ''
+            ).trim(),
+          idTokenLogged:
+            false
+        }
+      );
+    } catch (error) {
+      if (
+        selectedPlayerId !==
+        String(
+          playerId || ''
+        ).trim()
+      ) {
+        return;
+      }
+
+      setPlayerDetailMessage(
+        error && error.message
+          ? error.message
+          : '身体測定データを取得できませんでした。'
+      );
+
+      console.error(
+        '[NINJA Guardian Growth]',
+        error
+      );
+    }
+  }
+
   function showPlayerDetail(player) {
     if (!player) {
       return;
@@ -155,6 +429,14 @@
       String(
         player.playerId || ''
       ).trim();
+
+    if (!selectedPlayerId) {
+      setStatus(
+        '選手情報を確認できませんでした。'
+      );
+
+      return;
+    }
 
     if (playerDetailName) {
       playerDetailName.textContent =
@@ -176,6 +458,10 @@
     if (playerDetailSection) {
       playerDetailSection.hidden = false;
     }
+
+    loadPlayerGrowth(
+      selectedPlayerId
+    );
   }
 
   function hidePlayerDetail() {
@@ -192,6 +478,10 @@
     if (playerDetailCategory) {
       playerDetailCategory.textContent = '';
     }
+
+    setPlayerDetailMessage(
+      '選手データを表示する準備ができました。'
+    );
   }
 
   function clearPlayerList() {
@@ -217,6 +507,7 @@
       );
 
     card.type = 'button';
+
     card.className =
       'player-card';
 
@@ -404,7 +695,8 @@
     return api.post(
       'guardian.registrationStatus',
       {
-        idToken: currentIdToken
+        idToken:
+          currentIdToken
       }
     );
   }
@@ -425,8 +717,11 @@
     return api.post(
       'guardianInvite.claim',
       {
-        idToken: currentIdToken,
-        inviteCode: inviteCode
+        idToken:
+          currentIdToken,
+
+        inviteCode:
+          inviteCode
       }
     );
   }
@@ -573,7 +868,8 @@
       );
 
       await window.liff.init({
-        liffId: config.LIFF_ID
+        liffId:
+          config.LIFF_ID
       });
 
       setStatus(
@@ -613,7 +909,8 @@
 
       window.NINJA_GUARDIAN_AUTH =
         Object.freeze({
-          idToken: idToken
+          idToken:
+            idToken
         });
 
       await applyRegistrationState();
@@ -622,10 +919,17 @@
         '[NINJA Guardian]',
         config.APP_VERSION,
         {
-          liffReady: true,
-          loggedIn: true,
-          idTokenAvailable: true,
-          idTokenLogged: false
+          liffReady:
+            true,
+
+          loggedIn:
+            true,
+
+          idTokenAvailable:
+            true,
+
+          idTokenLogged:
+            false
         }
       );
     } catch (error) {
