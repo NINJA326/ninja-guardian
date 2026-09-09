@@ -72,6 +72,9 @@
       'invite-status'
     );
 
+  const LINE_AUTH_RETRY_KEY =
+    'ninjaGuardianLineAuthRetryStep17';
+
   let currentIdToken = '';
   let registeredPlayers = [];
   let selectedPlayerId = '';
@@ -118,6 +121,151 @@
     return /^[A-Z0-9]{10}$/.test(value);
   }
 
+  function getErrorMessage(error) {
+    return String(
+      error && error.message
+        ? error.message
+        : error || ''
+    );
+  }
+
+  function isExpiredLineIdTokenError(error) {
+    const message =
+      getErrorMessage(error)
+        .toLowerCase();
+
+    return (
+      message.indexOf('idtoken expired') >= 0 ||
+      message.indexOf('id token expired') >= 0 ||
+      (
+        message.indexOf('line認証に失敗') >= 0 &&
+        message.indexOf('expired') >= 0
+      )
+    );
+  }
+
+  function getCleanRedirectUri() {
+    try {
+      const url =
+        new URL(
+          window.location.href
+        );
+
+      [
+        'code',
+        'state',
+        'liffClientId',
+        'friendship_status_changed',
+        'liffRedirectUri'
+      ].forEach(
+        function(key) {
+          url.searchParams.delete(
+            key
+          );
+        }
+      );
+
+      return url.toString();
+    } catch (error) {
+      return window.location.origin +
+        window.location.pathname;
+    }
+  }
+
+  function getSessionStorageValue(key) {
+    try {
+      return window.sessionStorage
+        ? window.sessionStorage.getItem(key)
+        : '';
+    } catch (error) {
+      return '';
+    }
+  }
+
+  function setSessionStorageValue(
+    key,
+    value
+  ) {
+    try {
+      if (window.sessionStorage) {
+        window.sessionStorage.setItem(
+          key,
+          value
+        );
+      }
+    } catch (error) {
+      // sessionStorageが使えない環境では無視します。
+    }
+  }
+
+  function removeSessionStorageValue(key) {
+    try {
+      if (window.sessionStorage) {
+        window.sessionStorage.removeItem(
+          key
+        );
+      }
+    } catch (error) {
+      // sessionStorageが使えない環境では無視します。
+    }
+  }
+
+  function restartLineLogin(error) {
+    if (
+      getSessionStorageValue(
+        LINE_AUTH_RETRY_KEY
+      ) === '1'
+    ) {
+      fail(
+        'LINE認証の更新に失敗しました。LINEから保護者ページを開き直してください。',
+        error
+      );
+
+      return;
+    }
+
+    setSessionStorageValue(
+      LINE_AUTH_RETRY_KEY,
+      '1'
+    );
+
+    setStatus(
+      'LINE認証を更新しています…'
+    );
+
+    try {
+      if (
+        window.liff &&
+        window.liff.isLoggedIn()
+      ) {
+        window.liff.logout();
+      }
+    } catch (logoutError) {
+      console.warn(
+        '[NINJA Guardian]',
+        'LIFF logout skipped.',
+        logoutError
+      );
+    }
+
+    if (
+      !window.liff ||
+      typeof window.liff.login !== 'function'
+    ) {
+      fail(
+        'LINEログインを開始できませんでした。',
+        error
+      );
+
+      return;
+    }
+
+    window.liff.login({
+      redirectUri:
+        getCleanRedirectUri()
+    });
+  }
+
   function showInviteRegistration() {
     hidePlayerSection();
     hidePlayerDetail();
@@ -159,7 +307,9 @@
     playerDetailPlaceholder.replaceChildren();
 
     const paragraph =
-      document.createElement('p');
+      document.createElement(
+        'p'
+      );
 
     paragraph.textContent =
       message || '';
@@ -240,7 +390,9 @@
     playerDetailPlaceholder.replaceChildren();
 
     const title =
-      document.createElement('p');
+      document.createElement(
+        'p'
+      );
 
     title.textContent =
       '身体測定';
@@ -252,7 +404,9 @@
       '0 0 8px';
 
     const date =
-      document.createElement('p');
+      document.createElement(
+        'p'
+      );
 
     date.textContent =
       '最新測定日：' +
@@ -264,7 +418,9 @@
       '0 0 6px';
 
     const height =
-      document.createElement('p');
+      document.createElement(
+        'p'
+      );
 
     height.textContent =
       '身長：' +
@@ -277,7 +433,9 @@
       '0 0 6px';
 
     const weight =
-      document.createElement('p');
+      document.createElement(
+        'p'
+      );
 
     weight.textContent =
       '体重：' +
@@ -290,7 +448,9 @@
       '0 0 6px';
 
     const count =
-      document.createElement('p');
+      document.createElement(
+        'p'
+      );
 
     count.textContent =
       '記録件数：' +
@@ -398,6 +558,18 @@
         }
       );
     } catch (error) {
+      if (
+        isExpiredLineIdTokenError(
+          error
+        )
+      ) {
+        restartLineLogin(
+          error
+        );
+
+        return;
+      }
+
       if (
         selectedPlayerId !==
         String(
@@ -768,6 +940,18 @@
 
       await applyRegistrationState();
     } catch (error) {
+      if (
+        isExpiredLineIdTokenError(
+          error
+        )
+      ) {
+        restartLineLogin(
+          error
+        );
+
+        return;
+      }
+
       if (inviteSubmit) {
         inviteSubmit.disabled = false;
       }
@@ -883,7 +1067,7 @@
 
         window.liff.login({
           redirectUri:
-            window.location.href
+            getCleanRedirectUri()
         });
 
         return;
@@ -897,8 +1081,10 @@
         window.liff.getIDToken();
 
       if (!idToken) {
-        fail(
-          'LINE認証情報を取得できませんでした。'
+        restartLineLogin(
+          new Error(
+            'LINE認証情報を取得できませんでした。'
+          )
         );
 
         return;
@@ -914,6 +1100,10 @@
         });
 
       await applyRegistrationState();
+
+      removeSessionStorageValue(
+        LINE_AUTH_RETRY_KEY
+      );
 
       console.info(
         '[NINJA Guardian]',
@@ -933,6 +1123,18 @@
         }
       );
     } catch (error) {
+      if (
+        isExpiredLineIdTokenError(
+          error
+        )
+      ) {
+        restartLineLogin(
+          error
+        );
+
+        return;
+      }
+
       registeredPlayers = [];
       selectedPlayerId = '';
 
