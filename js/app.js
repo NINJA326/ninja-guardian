@@ -91,6 +91,12 @@
     }
   }
 
+  function hideInviteRegistration() {
+    if (inviteSection) {
+      inviteSection.hidden = true;
+    }
+  }
+
   function lockInviteForm() {
     if (inviteCodeElement) {
       inviteCodeElement.disabled = true;
@@ -99,6 +105,27 @@
     if (inviteSubmit) {
       inviteSubmit.disabled = true;
     }
+  }
+
+  async function getRegistrationStatus() {
+    if (!api || !api.post) {
+      throw new Error(
+        'API機能を読み込めませんでした。'
+      );
+    }
+
+    if (!currentIdToken) {
+      throw new Error(
+        'LINE認証情報がありません。'
+      );
+    }
+
+    return api.post(
+      'guardian.registrationStatus',
+      {
+        idToken: currentIdToken
+      }
+    );
   }
 
   async function claimInvite(inviteCode) {
@@ -157,14 +184,13 @@
       await claimInvite(inviteCode);
 
       lockInviteForm();
+      hideInviteRegistration();
 
       setStatus(
-        '保護者登録完了'
+        '保護者登録済み'
       );
 
-      setInviteStatus(
-        '選手との連携が完了しました。'
-      );
+      setInviteStatus('');
     } catch (error) {
       if (inviteSubmit) {
         inviteSubmit.disabled = false;
@@ -181,6 +207,34 @@
         error
       );
     }
+  }
+
+  async function applyRegistrationState() {
+    setStatus(
+      '保護者登録状況を確認しています…'
+    );
+
+    const result =
+      await getRegistrationStatus();
+
+    if (
+      result &&
+      result.registered === true
+    ) {
+      hideInviteRegistration();
+
+      setStatus(
+        '保護者登録済み'
+      );
+
+      return;
+    }
+
+    setStatus(
+      'LINE認証完了'
+    );
+
+    showInviteRegistration();
   }
 
   async function start() {
@@ -265,11 +319,7 @@
           idToken: idToken
         });
 
-      setStatus(
-        'LINE認証完了'
-      );
-
-      showInviteRegistration();
+      await applyRegistrationState();
 
       console.info(
         '[NINJA Guardian]',
@@ -282,8 +332,10 @@
         }
       );
     } catch (error) {
+      hideInviteRegistration();
+
       fail(
-        'LINE認証に失敗しました。',
+        '保護者登録状況の確認に失敗しました。',
         error
       );
     }
