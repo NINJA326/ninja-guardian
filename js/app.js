@@ -140,6 +140,10 @@
       (
         message.indexOf('line認証に失敗') >= 0 &&
         message.indexOf('expired') >= 0
+      ) ||
+      (
+        message.indexOf('line認証の有効期限') >= 0 &&
+        message.indexOf('expired') >= 0
       )
     );
   }
@@ -334,11 +338,97 @@
     return String(value) + unit;
   }
 
-  function renderGrowthResult(result) {
-    if (!playerDetailPlaceholder) {
-      return;
-    }
+  function createGrowthValueItem(
+    labelText,
+    valueText
+  ) {
+    const item =
+      document.createElement(
+        'div'
+      );
 
+    item.className =
+      'growth-value-item';
+
+    const label =
+      document.createElement(
+        'p'
+      );
+
+    label.className =
+      'growth-value-label';
+
+    label.textContent =
+      labelText;
+
+    const value =
+      document.createElement(
+        'p'
+      );
+
+    value.className =
+      'growth-value-number';
+
+    value.textContent =
+      valueText;
+
+    item.appendChild(
+      label
+    );
+
+    item.appendChild(
+      value
+    );
+
+    return item;
+  }
+
+  function createDetailErrorCard(
+    titleText,
+    messageText
+  ) {
+    const card =
+      document.createElement(
+        'section'
+      );
+
+    card.className =
+      'detail-error-card';
+
+    const title =
+      document.createElement(
+        'h3'
+      );
+
+    title.className =
+      'detail-error-title';
+
+    title.textContent =
+      titleText;
+
+    const message =
+      document.createElement(
+        'p'
+      );
+
+    message.className =
+      'detail-error-message';
+
+    message.textContent =
+      messageText;
+
+    card.appendChild(
+      title
+    );
+
+    card.appendChild(
+      message
+    );
+
+    return card;
+  }
+
+  function createGrowthCard(result) {
     const data =
       result &&
       result.data &&
@@ -357,12 +447,46 @@
         ? growth.records
         : [];
 
-    if (!records.length) {
-      setPlayerDetailMessage(
-        '身体測定データはまだありません。'
+    const card =
+      document.createElement(
+        'section'
       );
 
-      return;
+    card.className =
+      'growth-card';
+
+    const title =
+      document.createElement(
+        'h3'
+      );
+
+    title.className =
+      'growth-card-title';
+
+    title.textContent =
+      '身体測定';
+
+    card.appendChild(
+      title
+    );
+
+    if (!records.length) {
+      const empty =
+        document.createElement(
+          'p'
+        );
+
+      empty.className =
+        'feedback-empty';
+
+      empty.textContent =
+        '身体測定データはまだありません。';
+
+      card.appendChild(
+        empty
+      );
+
+      return card;
     }
 
     const sortedRecords =
@@ -387,26 +511,13 @@
     const latest =
       sortedRecords[0];
 
-    playerDetailPlaceholder.replaceChildren();
-
-    const title =
-      document.createElement(
-        'p'
-      );
-
-    title.textContent =
-      '身体測定';
-
-    title.style.fontWeight =
-      '700';
-
-    title.style.margin =
-      '0 0 8px';
-
     const date =
       document.createElement(
         'p'
       );
+
+    date.className =
+      'growth-latest-date';
 
     date.textContent =
       '最新測定日：' +
@@ -414,71 +525,207 @@
         latest.date || ''
       );
 
-    date.style.margin =
-      '0 0 6px';
-
-    const height =
+    const values =
       document.createElement(
-        'p'
+        'div'
       );
 
-    height.textContent =
-      '身長：' +
-      formatGrowthValue(
-        latest.height,
-        'cm'
-      );
+    values.className =
+      'growth-values';
 
-    height.style.margin =
-      '0 0 6px';
+    values.appendChild(
+      createGrowthValueItem(
+        '身長',
+        formatGrowthValue(
+          latest.height,
+          'cm'
+        )
+      )
+    );
 
-    const weight =
-      document.createElement(
-        'p'
-      );
-
-    weight.textContent =
-      '体重：' +
-      formatGrowthValue(
-        latest.weight,
-        'kg'
-      );
-
-    weight.style.margin =
-      '0 0 6px';
+    values.appendChild(
+      createGrowthValueItem(
+        '体重',
+        formatGrowthValue(
+          latest.weight,
+          'kg'
+        )
+      )
+    );
 
     const count =
       document.createElement(
         'p'
       );
 
+    count.className =
+      'growth-record-count';
+
     count.textContent =
       '記録件数：' +
       String(records.length) +
       '件';
 
-    count.style.margin =
-      '0';
-
-    playerDetailPlaceholder.appendChild(
-      title
-    );
-
-    playerDetailPlaceholder.appendChild(
+    card.appendChild(
       date
     );
 
-    playerDetailPlaceholder.appendChild(
-      height
+    card.appendChild(
+      values
     );
 
-    playerDetailPlaceholder.appendChild(
-      weight
-    );
-
-    playerDetailPlaceholder.appendChild(
+    card.appendChild(
       count
     );
+
+    return card;
+  }
+
+  function createFeedbackCard(result) {
+    const data =
+      result &&
+      result.data &&
+      typeof result.data === 'object'
+        ? result.data
+        : {};
+
+    const feedback =
+      data.feedback &&
+      typeof data.feedback === 'object'
+        ? data.feedback
+        : {};
+
+    const card =
+      document.createElement(
+        'section'
+      );
+
+    card.className =
+      'feedback-card';
+
+    const title =
+      document.createElement(
+        'h3'
+      );
+
+    title.className =
+      'feedback-card-title';
+
+    title.textContent =
+      'コーチ所見';
+
+    card.appendChild(
+      title
+    );
+
+    const exists =
+      feedback.exists === true &&
+      String(
+        feedback.feedbackText || ''
+      ).trim();
+
+    if (!exists) {
+      const empty =
+        document.createElement(
+          'p'
+        );
+
+      empty.className =
+        'feedback-empty';
+
+      empty.textContent =
+        'コーチ所見はまだありません。';
+
+      card.appendChild(
+        empty
+      );
+
+      return card;
+    }
+
+    if (feedback.savedAt) {
+      const savedAt =
+        document.createElement(
+          'p'
+        );
+
+      savedAt.className =
+        'feedback-saved-at';
+
+      savedAt.textContent =
+        '更新日時：' +
+        String(
+          feedback.savedAt
+        ).trim();
+
+      card.appendChild(
+        savedAt
+      );
+    }
+
+    const text =
+      document.createElement(
+        'p'
+      );
+
+    text.className =
+      'feedback-text';
+
+    text.textContent =
+      String(
+        feedback.feedbackText || ''
+      ).trim();
+
+    card.appendChild(
+      text
+    );
+
+    return card;
+  }
+
+  function renderPlayerDetailData(
+    growthResult,
+    growthError,
+    feedbackResult,
+    feedbackError
+  ) {
+    if (!playerDetailPlaceholder) {
+      return;
+    }
+
+    playerDetailPlaceholder.replaceChildren();
+
+    if (growthError) {
+      playerDetailPlaceholder.appendChild(
+        createDetailErrorCard(
+          '身体測定',
+          growthError.message ||
+          '身体測定データを取得できませんでした。'
+        )
+      );
+    } else {
+      playerDetailPlaceholder.appendChild(
+        createGrowthCard(
+          growthResult
+        )
+      );
+    }
+
+    if (feedbackError) {
+      playerDetailPlaceholder.appendChild(
+        createDetailErrorCard(
+          'コーチ所見',
+          feedbackError.message ||
+          'コーチ所見を取得できませんでした。'
+        )
+      );
+    } else {
+      playerDetailPlaceholder.appendChild(
+        createFeedbackCard(
+          feedbackResult
+        )
+      );
+    }
   }
 
   async function getPlayerGrowth(
@@ -519,77 +766,130 @@
     );
   }
 
-  async function loadPlayerGrowth(
+  async function getPlayerFeedback(
     playerId
   ) {
-    setPlayerDetailMessage(
-      '身体測定データを確認しています…'
-    );
-
-    try {
-      const result =
-        await getPlayerGrowth(
-          playerId
-        );
-
-      if (
-        selectedPlayerId !==
-        String(
-          playerId || ''
-        ).trim()
-      ) {
-        return;
-      }
-
-      renderGrowthResult(
-        result
-      );
-
-      console.info(
-        '[NINJA Guardian Growth]',
-        {
-          success: true,
-          playerId:
-            String(
-              playerId || ''
-            ).trim(),
-          idTokenLogged:
-            false
-        }
-      );
-    } catch (error) {
-      if (
-        isExpiredLineIdTokenError(
-          error
-        )
-      ) {
-        restartLineLogin(
-          error
-        );
-
-        return;
-      }
-
-      if (
-        selectedPlayerId !==
-        String(
-          playerId || ''
-        ).trim()
-      ) {
-        return;
-      }
-
-      setPlayerDetailMessage(
-        error && error.message
-          ? error.message
-          : '身体測定データを取得できませんでした。'
-      );
-
-      console.error(
-        '[NINJA Guardian Growth]',
-        error
+    if (!api || !api.post) {
+      throw new Error(
+        'API機能を読み込めませんでした。'
       );
     }
+
+    if (!currentIdToken) {
+      throw new Error(
+        'LINE認証情報がありません。'
+      );
+    }
+
+    const normalizedPlayerId =
+      String(
+        playerId || ''
+      ).trim();
+
+    if (!normalizedPlayerId) {
+      throw new Error(
+        '選手IDがありません。'
+      );
+    }
+
+    return api.post(
+      'guardian.playerFeedback',
+      {
+        idToken:
+          currentIdToken,
+
+        playerId:
+          normalizedPlayerId
+      }
+    );
+  }
+
+  async function loadPlayerDetailData(
+    playerId
+  ) {
+    const normalizedPlayerId =
+      String(
+        playerId || ''
+      ).trim();
+
+    setPlayerDetailMessage(
+      '選手データを確認しています…'
+    );
+
+    const results =
+      await Promise.allSettled([
+        getPlayerGrowth(
+          normalizedPlayerId
+        ),
+        getPlayerFeedback(
+          normalizedPlayerId
+        )
+      ]);
+
+    if (
+      selectedPlayerId !==
+      normalizedPlayerId
+    ) {
+      return;
+    }
+
+    const growthResult =
+      results[0].status === 'fulfilled'
+        ? results[0].value
+        : null;
+
+    const growthError =
+      results[0].status === 'rejected'
+        ? results[0].reason
+        : null;
+
+    const feedbackResult =
+      results[1].status === 'fulfilled'
+        ? results[1].value
+        : null;
+
+    const feedbackError =
+      results[1].status === 'rejected'
+        ? results[1].reason
+        : null;
+
+    if (
+      isExpiredLineIdTokenError(
+        growthError
+      ) ||
+      isExpiredLineIdTokenError(
+        feedbackError
+      )
+    ) {
+      restartLineLogin(
+        growthError ||
+        feedbackError
+      );
+
+      return;
+    }
+
+    renderPlayerDetailData(
+      growthResult,
+      growthError,
+      feedbackResult,
+      feedbackError
+    );
+
+    console.info(
+      '[NINJA Guardian Detail]',
+      {
+        success: true,
+        playerId:
+          normalizedPlayerId,
+        growthLoaded:
+          !growthError,
+        feedbackLoaded:
+          !feedbackError,
+        idTokenLogged:
+          false
+      }
+    );
   }
 
   function showPlayerDetail(player) {
@@ -631,7 +931,7 @@
       playerDetailSection.hidden = false;
     }
 
-    loadPlayerGrowth(
+    loadPlayerDetailData(
       selectedPlayerId
     );
   }
