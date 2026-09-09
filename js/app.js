@@ -12,6 +12,36 @@
       'app-status'
     );
 
+  const playerSection =
+    document.getElementById(
+      'player-section'
+    );
+
+  const playerList =
+    document.getElementById(
+      'player-list'
+    );
+
+  const playerDetailSection =
+    document.getElementById(
+      'player-detail-section'
+    );
+
+  const playerDetailBack =
+    document.getElementById(
+      'player-detail-back'
+    );
+
+  const playerDetailName =
+    document.getElementById(
+      'player-detail-name'
+    );
+
+  const playerDetailCategory =
+    document.getElementById(
+      'player-detail-category'
+    );
+
   const inviteSection =
     document.getElementById(
       'invite-section'
@@ -38,6 +68,8 @@
     );
 
   let currentIdToken = '';
+  let registeredPlayers = [];
+  let selectedPlayerId = '';
 
   function setStatus(message) {
     if (statusElement) {
@@ -82,6 +114,9 @@
   }
 
   function showInviteRegistration() {
+    hidePlayerSection();
+    hidePlayerDetail();
+
     if (inviteSection) {
       inviteSection.hidden = false;
     }
@@ -97,6 +132,74 @@
     }
   }
 
+  function showPlayerSection() {
+    hidePlayerDetail();
+
+    if (playerSection) {
+      playerSection.hidden = false;
+    }
+  }
+
+  function hidePlayerSection() {
+    if (playerSection) {
+      playerSection.hidden = true;
+    }
+  }
+
+  function showPlayerDetail(player) {
+    if (!player) {
+      return;
+    }
+
+    selectedPlayerId =
+      String(
+        player.playerId || ''
+      ).trim();
+
+    if (playerDetailName) {
+      playerDetailName.textContent =
+        String(
+          player.playerName || ''
+        ).trim();
+    }
+
+    if (playerDetailCategory) {
+      playerDetailCategory.textContent =
+        String(
+          player.category || ''
+        ).trim();
+    }
+
+    hidePlayerSection();
+    hideInviteRegistration();
+
+    if (playerDetailSection) {
+      playerDetailSection.hidden = false;
+    }
+  }
+
+  function hidePlayerDetail() {
+    selectedPlayerId = '';
+
+    if (playerDetailSection) {
+      playerDetailSection.hidden = true;
+    }
+
+    if (playerDetailName) {
+      playerDetailName.textContent = '';
+    }
+
+    if (playerDetailCategory) {
+      playerDetailCategory.textContent = '';
+    }
+  }
+
+  function clearPlayerList() {
+    if (playerList) {
+      playerList.replaceChildren();
+    }
+  }
+
   function lockInviteForm() {
     if (inviteCodeElement) {
       inviteCodeElement.disabled = true;
@@ -107,77 +210,182 @@
     }
   }
 
-  function buildRegisteredPlayerText(players) {
-    if (!Array.isArray(players)) {
-      return '';
-    }
-
-    const validPlayers =
-      players.filter(
-        function(player) {
-          return (
-            player &&
-            String(
-              player.playerName || ''
-            ).trim()
-          );
-        }
+  function createPlayerCard(player) {
+    const card =
+      document.createElement(
+        'button'
       );
 
-    if (!validPlayers.length) {
-      return '';
+    card.type = 'button';
+    card.className =
+      'player-card';
+
+    const content =
+      document.createElement(
+        'div'
+      );
+
+    content.className =
+      'player-card-content';
+
+    const main =
+      document.createElement(
+        'div'
+      );
+
+    main.className =
+      'player-card-main';
+
+    const name =
+      document.createElement(
+        'p'
+      );
+
+    name.className =
+      'player-name';
+
+    name.textContent =
+      String(
+        player &&
+        player.playerName
+          ? player.playerName
+          : ''
+      ).trim();
+
+    const category =
+      document.createElement(
+        'p'
+      );
+
+    category.className =
+      'player-category';
+
+    category.textContent =
+      String(
+        player &&
+        player.category
+          ? player.category
+          : ''
+      ).trim();
+
+    const arrow =
+      document.createElement(
+        'span'
+      );
+
+    arrow.className =
+      'player-card-arrow';
+
+    arrow.setAttribute(
+      'aria-hidden',
+      'true'
+    );
+
+    arrow.textContent = '›';
+
+    main.appendChild(name);
+
+    if (category.textContent) {
+      main.appendChild(
+        category
+      );
     }
 
-    return validPlayers
-      .map(
-        function(player) {
-          const playerName =
-            String(
-              player.playerName || ''
-            ).trim();
+    content.appendChild(main);
+    content.appendChild(arrow);
 
-          const category =
-            String(
-              player.category || ''
-            ).trim();
+    card.appendChild(content);
 
-          if (category) {
-            return (
-              playerName +
-              '｜' +
-              category
-            );
-          }
+    card.setAttribute(
+      'aria-label',
+      name.textContent +
+      'の選手情報を開く'
+    );
 
-          return playerName;
+    card.addEventListener(
+      'click',
+      function() {
+        showPlayerDetail(
+          player
+        );
+      }
+    );
+
+    return card;
+  }
+
+  function renderPlayers(players) {
+    clearPlayerList();
+
+    registeredPlayers =
+      Array.isArray(players)
+        ? players.slice()
+        : [];
+
+    if (
+      !playerList ||
+      !registeredPlayers.length
+    ) {
+      return;
+    }
+
+    registeredPlayers.forEach(
+      function(player) {
+        const playerName =
+          String(
+            player &&
+            player.playerName
+              ? player.playerName
+              : ''
+          ).trim();
+
+        if (!playerName) {
+          return;
         }
-      )
-      .join(' / ');
+
+        playerList.appendChild(
+          createPlayerCard(
+            player
+          )
+        );
+      }
+    );
   }
 
   function showRegisteredState(result) {
     hideInviteRegistration();
+    hidePlayerDetail();
 
-    const playerText =
-      buildRegisteredPlayerText(
-        result &&
-        Array.isArray(result.players)
-          ? result.players
-          : []
-      );
+    const players =
+      result &&
+      Array.isArray(result.players)
+        ? result.players
+        : [];
 
-    if (playerText) {
-      setStatus(
-        '保護者登録済み　' +
-        playerText
-      );
+    renderPlayers(players);
 
+    setStatus(
+      '保護者登録済み'
+    );
+
+    if (players.length) {
+      showPlayerSection();
+    } else {
+      hidePlayerSection();
+    }
+  }
+
+  function handlePlayerDetailBack() {
+    if (!registeredPlayers.length) {
+      hidePlayerDetail();
       return;
     }
 
     setStatus(
       '保護者登録済み'
     );
+
+    showPlayerSection();
   }
 
   async function getRegistrationStatus() {
@@ -237,6 +445,7 @@
       setInviteStatus(
         '10文字の招待コードを入力してください。'
       );
+
       return;
     }
 
@@ -300,6 +509,12 @@
       return;
     }
 
+    registeredPlayers = [];
+
+    clearPlayerList();
+    hidePlayerSection();
+    hidePlayerDetail();
+
     setStatus(
       'LINE認証完了'
     );
@@ -312,6 +527,14 @@
       '設定を確認しています…'
     );
 
+    registeredPlayers = [];
+    selectedPlayerId = '';
+
+    clearPlayerList();
+    hidePlayerSection();
+    hidePlayerDetail();
+    hideInviteRegistration();
+
     if (
       !config ||
       !config.LIFF_ID ||
@@ -320,6 +543,7 @@
       fail(
         '設定を読み込めませんでした。'
       );
+
       return;
     }
 
@@ -327,6 +551,7 @@
       fail(
         'API機能を読み込めませんでした。'
       );
+
       return;
     }
 
@@ -338,6 +563,7 @@
       fail(
         'LINE認証機能を読み込めませんでした。'
       );
+
       return;
     }
 
@@ -378,6 +604,7 @@
         fail(
           'LINE認証情報を取得できませんでした。'
         );
+
         return;
       }
 
@@ -402,6 +629,12 @@
         }
       );
     } catch (error) {
+      registeredPlayers = [];
+      selectedPlayerId = '';
+
+      clearPlayerList();
+      hidePlayerSection();
+      hidePlayerDetail();
       hideInviteRegistration();
 
       fail(
@@ -415,6 +648,13 @@
     inviteForm.addEventListener(
       'submit',
       handleInviteSubmit
+    );
+  }
+
+  if (playerDetailBack) {
+    playerDetailBack.addEventListener(
+      'click',
+      handlePlayerDetailBack
     );
   }
 
