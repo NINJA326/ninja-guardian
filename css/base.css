@@ -260,6 +260,7 @@ h2 {
 
 .growth-card,
 .feedback-card,
+.agility-card,
 .detail-error-card {
   padding: var(--space-3);
 
@@ -271,6 +272,7 @@ h2 {
 
 .growth-card-title,
 .feedback-card-title,
+.agility-card-title,
 .detail-error-title {
   margin: 0 0 var(--space-2);
 
@@ -328,7 +330,8 @@ h2 {
   line-height: 1.3;
 }
 
-.growth-record-count {
+.growth-record-count,
+.agility-record-count {
   margin: 0;
 
   color: var(--color-muted);
@@ -356,6 +359,63 @@ h2 {
 
   font-size: 15px;
   line-height: 1.7;
+}
+
+.agility-list {
+  display: grid;
+  gap: var(--space-2);
+
+  margin: 0 0 var(--space-3);
+}
+
+.agility-item {
+  padding: var(--space-2);
+
+  background: var(--color-soft);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.agility-item-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: var(--space-2);
+
+  margin-bottom: 6px;
+}
+
+.agility-type {
+  margin: 0;
+
+  color: var(--color-text);
+
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.agility-date {
+  margin: 0;
+
+  color: var(--color-muted);
+
+  font-size: 12px;
+  line-height: 1.5;
+
+  white-space: nowrap;
+}
+
+.agility-value {
+  margin: 0;
+
+  color: var(--color-text);
+
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.3;
 }
 
 .detail-error-message {
@@ -444,5 +504,14 @@ h2 {
 
   .growth-value-number {
     font-size: 21px;
+  }
+
+  .agility-item-header {
+    display: grid;
+    gap: 2px;
+  }
+
+  .agility-date {
+    white-space: normal;
   }
 }
