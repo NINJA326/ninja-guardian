@@ -13,11 +13,11 @@
     content="#ffffff"
   >
 
-  <title>NINJA AIRS 保護者</title>
+  <title>NINJA AIRS 公式LINE入口</title>
 
   <link
     rel="stylesheet"
-    href="./css/base.css?v=step38"
+    href="./css/base.css?v=step44"
   >
 </head>
 <body>
@@ -34,7 +34,7 @@
       </p>
 
       <h1 id="app-title">
-        保護者ページ
+        公式LINE入口
       </h1>
 
       <p
@@ -44,6 +44,92 @@
       >
         LINE認証を確認しています…
       </p>
+
+      <section
+        id="role-choice-section"
+        class="choice-section"
+        hidden
+        aria-labelledby="role-choice-title"
+      >
+        <h2 id="role-choice-title">
+          利用方法を選択
+        </h2>
+
+        <p class="section-lead">
+          このLINEは選手・保護者の両方で登録されています。
+        </p>
+
+        <div class="action-grid">
+          <button
+            id="use-player-role"
+            class="action-button"
+            type="button"
+          >
+            <span class="action-title">
+              選手として使う
+            </span>
+            <span class="action-description">
+              選手用の記録・フィードバックを開く
+            </span>
+          </button>
+
+          <button
+            id="use-guardian-role"
+            class="action-button"
+            type="button"
+          >
+            <span class="action-title">
+              保護者として使う
+            </span>
+            <span class="action-description">
+              登録した子どもの情報を閲覧する
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <section
+        id="player-role-section"
+        class="choice-section"
+        hidden
+        aria-labelledby="player-role-title"
+      >
+        <h2 id="player-role-title">
+          選手メニュー
+        </h2>
+
+        <p class="section-lead">
+          選手として登録済みです。
+        </p>
+
+        <div class="action-grid">
+          <button
+            id="player-open-growth"
+            class="action-button"
+            type="button"
+          >
+            <span class="action-title">
+              成長記録
+            </span>
+            <span class="action-description">
+              自分の成長記録を開く
+            </span>
+          </button>
+
+          <button
+            id="player-open-feedback"
+            class="action-button"
+            type="button"
+          >
+            <span class="action-title">
+              フィードバック
+            </span>
+            <span class="action-description">
+              自分のフィードバックを開く
+            </span>
+          </button>
+        </div>
+      </section>
 
       <section
         id="player-section"
@@ -57,6 +143,13 @@
         >
           登録選手
         </h2>
+
+        <p
+          id="player-section-lead"
+          class="section-lead"
+        >
+          閲覧する子どもを選択してください。
+        </p>
 
         <div
           id="player-list"
@@ -102,15 +195,91 @@
       </section>
 
       <section
+        id="registration-choice-section"
+        class="choice-section"
+        hidden
+        aria-labelledby="registration-choice-title"
+      >
+        <h2 id="registration-choice-title">
+          登録を開始
+        </h2>
+
+        <p class="section-lead">
+          このLINEはまだ選手・保護者どちらにも登録されていません。
+        </p>
+
+        <div class="action-grid">
+          <button
+            id="start-player-registration"
+            class="action-button"
+            type="button"
+          >
+            <span class="action-title">
+              選手登録
+            </span>
+            <span class="action-description">
+              選手本人として利用する
+            </span>
+          </button>
+
+          <button
+            id="start-guardian-registration"
+            class="action-button"
+            type="button"
+          >
+            <span class="action-title">
+              保護者登録
+            </span>
+            <span class="action-description">
+              招待コードで子どもと紐付ける
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <section
+        id="player-registration-info"
+        class="choice-section"
+        hidden
+        aria-labelledby="player-registration-title"
+      >
+        <button
+          id="player-registration-back"
+          class="back-button"
+          type="button"
+        >
+          ← 戻る
+        </button>
+
+        <h2 id="player-registration-title">
+          選手登録について
+        </h2>
+
+        <p class="section-lead">
+          選手登録は、チームから案内された選手用の登録方法で進めてください。
+          登録方法が分からない場合は、コーチへ連絡してください。
+        </p>
+      </section>
+
+      <section
         id="invite-section"
+        class="choice-section"
         hidden
         aria-labelledby="invite-title"
       >
+        <button
+          id="invite-back"
+          class="back-button"
+          type="button"
+        >
+          ← 戻る
+        </button>
+
         <h2 id="invite-title">
           保護者登録
         </h2>
 
-        <p>
+        <p class="section-lead">
           チームから案内された招待コードを入力してください。
         </p>
 
@@ -153,8 +322,8 @@
     src="https://static.line-scdn.net/liff/edge/2/sdk.js"
   ></script>
 
-  <script src="./js/config.js?v=step38"></script>
-  <script src="./js/api.js?v=step38"></script>
-  <script src="./js/app.js?v=step38"></script>
+  <script src="./js/config.js?v=step44"></script>
+  <script src="./js/api.js?v=step44"></script>
+  <script src="./js/app.js?v=step44"></script>
 </body>
 </html>
