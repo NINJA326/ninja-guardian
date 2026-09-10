@@ -83,10 +83,19 @@
     document.getElementById('invite-status');
 
   const LINE_AUTH_RETRY_KEY =
-    'ninjaOfficialEntryLineAuthRetryStep44';
+    'ninjaOfficialEntryLineAuthRetryStep45';
 
   const DEFAULT_PLAYER_ID_KEY =
-    'ninjaGuardianDefaultPlayerIdStep44';
+    'ninjaGuardianDefaultPlayerIdStep45';
+
+  const STATE_CACHE_PREFIX =
+    'ninjaOfficialEntryStateCacheStep45:';
+
+  const STATE_CACHE_VERSION =
+    'step45-entry-state-cache-v1';
+
+  const STATE_CACHE_TTL_MS =
+    7 * 24 * 60 * 60 * 1000;
 
   const PLAYER_APP_URLS =
     Object.freeze({
@@ -117,6 +126,8 @@
   let requestedRole = '';
   let playerStatus = null;
   let guardianStatus = null;
+  let currentUserCacheKey = '';
+  let cachedStateShown = false;
 
   function textOf(value) {
     return String(
@@ -302,6 +313,334 @@
     }
   }
 
+  function base64UrlDecode(value) {
+    const base64 = String(value || '')
+      .replace(/-/g, '+')
+      .replace(/_/g, '/');
+
+    const padded =
+      base64 +
+      '='.repeat(
+        (4 - base64.length % 4) % 4
+      );
+
+    return window.atob(padded);
+  }
+
+  function decodeJwtPayload(idToken) {
+    try {
+      const parts =
+        String(idToken || '').split('.');
+
+      if (parts.length < 2) {
+        return {};
+      }
+
+      const binary =
+        base64UrlDecode(parts[1]);
+
+      const json = decodeURIComponent(
+        Array.prototype.map.call(
+          binary,
+          function mapChar(character) {
+            return '%' +
+              ('00' + character.charCodeAt(0).toString(16))
+                .slice(-2);
+          }
+        ).join('')
+      );
+
+      return JSON.parse(json);
+    } catch (error) {
+      return {};
+    }
+  }
+
+  function fallbackHash(value) {
+    let hash = 5381;
+    const source =
+      String(value || '');
+
+    for (let index = 0; index < source.length; index += 1) {
+      hash = ((hash << 5) + hash) + source.charCodeAt(index);
+      hash = hash & hash;
+    }
+
+    return Math.abs(hash).toString(16);
+  }
+
+  async function sha256Hex(value) {
+    const source =
+      String(value || '');
+
+    if (
+      window.crypto &&
+      window.crypto.subtle &&
+      window.TextEncoder
+    ) {
+      const encoded =
+        new TextEncoder().encode(source);
+
+      const digest =
+        await window.crypto.subtle.digest(
+          'SHA-256',
+          encoded
+        );
+
+      return Array.from(
+        new Uint8Array(digest)
+      ).map(function toHex(byte) {
+        return byte.toString(16).padStart(2, '0');
+      }).join('');
+    }
+
+    return fallbackHash(source);
+  }
+
+  async function createUserCacheKeyFromIdToken(idToken) {
+    const payload =
+      decodeJwtPayload(idToken);
+
+    const subject =
+      textOf(
+        payload.sub ||
+        payload.userId ||
+        ''
+      );
+
+    if (!subject) {
+      return '';
+    }
+
+    return await sha256Hex(subject);
+  }
+
+  function getStateCacheStorageKey() {
+    if (!currentUserCacheKey) {
+      return '';
+    }
+
+    return STATE_CACHE_PREFIX +
+      currentUserCacheKey;
+  }
+
+  function getScopedDefaultPlayerIdKey() {
+    return currentUserCacheKey
+      ? DEFAULT_PLAYER_ID_KEY + ':' + currentUserCacheKey
+      : DEFAULT_PLAYER_ID_KEY;
+  }
+
+  function sanitizePlayer(player) {
+    const playerId =
+      textOf(
+        player && player.playerId
+      );
+
+    const playerName =
+      textOf(
+        player &&
+        (
+          player.playerName ||
+          player.name
+        )
+      );
+
+    const category =
+      textOf(
+        player && player.category
+      );
+
+    if (!playerId && !playerName) {
+      return null;
+    }
+
+    return {
+      playerId:
+        playerId,
+
+      playerName:
+        playerName,
+
+      name:
+        playerName,
+
+      category:
+        category
+    };
+  }
+
+  function sanitizePlayers(players) {
+    return arrayOf(players)
+      .map(sanitizePlayer)
+      .filter(Boolean);
+  }
+
+  function sanitizePlayerStatus(status) {
+    const player =
+      sanitizePlayer(
+        status && status.player
+      );
+
+    return {
+      registered:
+        !!(
+          status && status.registered
+        ),
+
+      sessionToken:
+        '',
+
+      player:
+        player,
+
+      checked:
+        status && status.checked !== false
+    };
+  }
+
+  function sanitizeGuardianStatus(status) {
+    const players =
+      sanitizePlayers(
+        status && status.players
+      );
+
+    return {
+      registered:
+        !!(
+          status && status.registered
+        ) || players.length > 0,
+
+      players:
+        players,
+
+      checked:
+        status && status.checked !== false
+    };
+  }
+
+  function saveCachedDetectedState() {
+    const storageKey =
+      getStateCacheStorageKey();
+
+    if (!storageKey) {
+      return;
+    }
+
+    const cache = {
+      version:
+        STATE_CACHE_VERSION,
+
+      savedAt:
+        Date.now(),
+
+      defaultPlayerId:
+        getDefaultPlayerId(),
+
+      playerStatus:
+        sanitizePlayerStatus(playerStatus),
+
+      guardianStatus:
+        sanitizeGuardianStatus(guardianStatus)
+    };
+
+    setLocalStorageValue(
+      storageKey,
+      JSON.stringify(cache)
+    );
+  }
+
+  function readCachedDetectedState() {
+    const storageKey =
+      getStateCacheStorageKey();
+
+    if (!storageKey) {
+      return null;
+    }
+
+    const raw =
+      getLocalStorageValue(storageKey);
+
+    if (!raw) {
+      return null;
+    }
+
+    try {
+      const cache = JSON.parse(raw);
+
+      if (
+        !cache ||
+        cache.version !== STATE_CACHE_VERSION ||
+        !cache.savedAt ||
+        Date.now() - Number(cache.savedAt) > STATE_CACHE_TTL_MS
+      ) {
+        removeLocalStorageValue(storageKey);
+        return null;
+      }
+
+      return cache;
+    } catch (error) {
+      removeLocalStorageValue(storageKey);
+      return null;
+    }
+  }
+
+  function isCommunicationFailureMessage(message) {
+    const text =
+      textOf(message);
+
+    return (
+      text.indexOf('タイムアウト') >= 0 ||
+      text.indexOf('接続できません') >= 0 ||
+      text.indexOf('通信') >= 0
+    );
+  }
+
+  async function applyCachedDetectedStateIfAvailable() {
+    const cache =
+      readCachedDetectedState();
+
+    if (!cache) {
+      return false;
+    }
+
+    playerStatus =
+      sanitizePlayerStatus(
+        cache.playerStatus
+      );
+
+    guardianStatus =
+      sanitizeGuardianStatus(
+        cache.guardianStatus
+      );
+
+    const cachedDefaultPlayerId =
+      textOf(
+        cache.defaultPlayerId
+      );
+
+    if (
+      cachedDefaultPlayerId &&
+      !getDefaultPlayerId()
+    ) {
+      setLocalStorageValue(
+        getScopedDefaultPlayerIdKey(),
+        cachedDefaultPlayerId
+      );
+    }
+
+    cachedStateShown = true;
+
+    await applyDetectedState();
+
+    if (!launchIntent) {
+      setStatus(
+        '前回情報を表示中。最新状態を確認しています…'
+      );
+    }
+
+    return true;
+  }
+
   function getRequestParam(name) {
     try {
       const url =
@@ -440,7 +779,10 @@
       return {
         registered: false,
         sessionToken: '',
-        player: null
+        player: null,
+        checked: !isCommunicationFailureMessage(
+          result && result.message
+        )
       };
     }
 
@@ -468,7 +810,9 @@
         sessionToken,
 
       player:
-        player
+        sanitizePlayer(player),
+
+      checked: true
     };
   }
 
@@ -476,7 +820,10 @@
     if (!isOkResponse(result)) {
       return {
         registered: false,
-        players: []
+        players: [],
+        checked: !isCommunicationFailureMessage(
+          result && result.message
+        )
       };
     }
 
@@ -484,7 +831,7 @@
       getResponseData(result);
 
     const players =
-      arrayOf(
+      sanitizePlayers(
         data.players ||
         result.players
       );
@@ -496,7 +843,9 @@
         players.length > 0,
 
       players:
-        players
+        players,
+
+      checked: true
     };
   }
 
@@ -573,7 +922,7 @@
     }
 
     setLocalStorageValue(
-      DEFAULT_PLAYER_ID_KEY,
+      getScopedDefaultPlayerIdKey(),
       normalizedPlayerId
     );
   }
@@ -581,7 +930,7 @@
   function getDefaultPlayerId() {
     return textOf(
       getLocalStorageValue(
-        DEFAULT_PLAYER_ID_KEY
+        getScopedDefaultPlayerIdKey()
       )
     );
   }
@@ -621,7 +970,7 @@
     }
 
     removeLocalStorageValue(
-      DEFAULT_PLAYER_ID_KEY
+      getScopedDefaultPlayerIdKey()
     );
 
     return null;
@@ -1268,6 +1617,8 @@
       guardianStatus =
         await getGuardianStatus();
 
+      saveCachedDetectedState();
+
       await showGuardianRole();
     } catch (error) {
       if (
@@ -1356,6 +1707,8 @@
     requestedRole = getRequestedRole();
     playerStatus = null;
     guardianStatus = null;
+    currentUserCacheKey = '';
+    cachedStateShown = false;
 
     clearPlayerList();
     hideAllSections();
@@ -1456,8 +1809,17 @@
             idToken
         });
 
+      currentUserCacheKey =
+        await createUserCacheKeyFromIdToken(
+          idToken
+        );
+
+      await applyCachedDetectedStateIfAvailable();
+
       setStatus(
-        '登録状況を確認しています…'
+        cachedStateShown
+          ? '最新の登録状況を確認しています…'
+          : '登録状況を確認しています…'
       );
 
       const results =
@@ -1466,11 +1828,33 @@
           getGuardianStatus()
         ]);
 
-      playerStatus =
+      const freshPlayerStatus =
         results[0];
 
-      guardianStatus =
+      const freshGuardianStatus =
         results[1];
+
+      if (
+        cachedStateShown &&
+        freshPlayerStatus &&
+        freshPlayerStatus.checked === false &&
+        freshGuardianStatus &&
+        freshGuardianStatus.checked === false
+      ) {
+        setStatus(
+          '最新確認に時間がかかっています。前回情報を表示しています。'
+        );
+
+        return;
+      }
+
+      playerStatus =
+        freshPlayerStatus;
+
+      guardianStatus =
+        freshGuardianStatus;
+
+      saveCachedDetectedState();
 
       await applyDetectedState();
 
@@ -1498,6 +1882,8 @@
             requestedRole,
           open:
             launchIntent,
+          cachedStateUsed:
+            cachedStateShown,
           idTokenLogged:
             false
         }
@@ -1507,6 +1893,19 @@
         isExpiredLineIdTokenError(error)
       ) {
         restartLineLogin(error);
+        return;
+      }
+
+      if (cachedStateShown) {
+        setStatus(
+          '最新確認に失敗しました。前回情報を表示しています。'
+        );
+
+        console.error(
+          '[NINJA Entry]',
+          error
+        );
+
         return;
       }
 
