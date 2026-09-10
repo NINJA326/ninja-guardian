@@ -1,14 +1,35 @@
 'use strict';
 
-(function bootstrapGuardianApp() {
+(function bootstrapNinjaOfficialEntry() {
   const config = window.NINJA_GUARDIAN_CONFIG;
   const api = window.NINJA_GUARDIAN_API;
 
   const statusElement =
     document.getElementById('app-status');
 
+  const roleChoiceSection =
+    document.getElementById('role-choice-section');
+
+  const usePlayerRoleButton =
+    document.getElementById('use-player-role');
+
+  const useGuardianRoleButton =
+    document.getElementById('use-guardian-role');
+
+  const playerRoleSection =
+    document.getElementById('player-role-section');
+
+  const playerOpenGrowthButton =
+    document.getElementById('player-open-growth');
+
+  const playerOpenFeedbackButton =
+    document.getElementById('player-open-feedback');
+
   const playerSection =
     document.getElementById('player-section');
+
+  const playerSectionLead =
+    document.getElementById('player-section-lead');
 
   const playerList =
     document.getElementById('player-list');
@@ -28,8 +49,26 @@
   const playerDetailPlaceholder =
     document.querySelector('.player-detail-placeholder');
 
+  const registrationChoiceSection =
+    document.getElementById('registration-choice-section');
+
+  const startPlayerRegistrationButton =
+    document.getElementById('start-player-registration');
+
+  const startGuardianRegistrationButton =
+    document.getElementById('start-guardian-registration');
+
+  const playerRegistrationInfo =
+    document.getElementById('player-registration-info');
+
+  const playerRegistrationBack =
+    document.getElementById('player-registration-back');
+
   const inviteSection =
     document.getElementById('invite-section');
+
+  const inviteBack =
+    document.getElementById('invite-back');
 
   const inviteForm =
     document.getElementById('invite-form');
@@ -44,24 +83,40 @@
     document.getElementById('invite-status');
 
   const LINE_AUTH_RETRY_KEY =
-    'ninjaGuardianLineAuthRetryStep33';
+    'ninjaOfficialEntryLineAuthRetryStep44';
+
+  const DEFAULT_PLAYER_ID_KEY =
+    'ninjaGuardianDefaultPlayerIdStep44';
+
+  const PLAYER_APP_URLS =
+    Object.freeze({
+      growth:
+        'https://liff.line.me/2010789200-zVWWxqSQ',
+
+      feedback:
+        'https://liff.line.me/2010789200-osUDbuzD'
+    });
 
   const EXISTING_APP_LABELS =
     Object.freeze({
       growth: {
         title: '成長記録',
-        description: '選択した選手の成長記録を開く'
+        description: '選択した子どもの成長記録を開く'
       },
 
       feedback: {
         title: 'フィードバック',
-        description: '選択した選手のフィードバックを開く'
+        description: '選択した子どものフィードバックを開く'
       }
     });
 
   let currentIdToken = '';
   let registeredPlayers = [];
   let selectedPlayerId = '';
+  let launchIntent = '';
+  let requestedRole = '';
+  let playerStatus = null;
+  let guardianStatus = null;
 
   function textOf(value) {
     return String(
@@ -102,6 +157,18 @@
     if (element) {
       element.hidden = true;
     }
+  }
+
+  function hideAllSections() {
+    [
+      roleChoiceSection,
+      playerRoleSection,
+      playerSection,
+      playerDetailSection,
+      registrationChoiceSection,
+      playerRegistrationInfo,
+      inviteSection
+    ].forEach(hideElement);
   }
 
   function clearPlayerList() {
@@ -202,6 +269,74 @@
     }
   }
 
+  function getLocalStorageValue(key) {
+    try {
+      return window.localStorage
+        ? window.localStorage.getItem(key)
+        : '';
+    } catch (error) {
+      return '';
+    }
+  }
+
+  function setLocalStorageValue(key, value) {
+    try {
+      if (window.localStorage) {
+        window.localStorage.setItem(
+          key,
+          value
+        );
+      }
+    } catch (error) {
+      // localStorageが使えない環境では無視します。
+    }
+  }
+
+  function removeLocalStorageValue(key) {
+    try {
+      if (window.localStorage) {
+        window.localStorage.removeItem(key);
+      }
+    } catch (error) {
+      // localStorageが使えない環境では無視します。
+    }
+  }
+
+  function getRequestParam(name) {
+    try {
+      const url =
+        new URL(window.location.href);
+
+      return textOf(
+        url.searchParams.get(name)
+      );
+    } catch (error) {
+      return '';
+    }
+  }
+
+  function getRequestedOpenIntent() {
+    const value =
+      getRequestParam('open');
+
+    return Object.prototype.hasOwnProperty.call(
+      EXISTING_APP_LABELS,
+      value
+    )
+      ? value
+      : '';
+  }
+
+  function getRequestedRole() {
+    const value =
+      getRequestParam('role');
+
+    return value === 'player' ||
+      value === 'guardian'
+        ? value
+        : '';
+  }
+
   function restartLineLogin(error) {
     if (
       getSessionStorageValue(
@@ -213,7 +348,7 @@
       );
 
       console.error(
-        '[NINJA Guardian]',
+        '[NINJA Entry]',
         error
       );
 
@@ -238,7 +373,7 @@
       }
     } catch (logoutError) {
       console.warn(
-        '[NINJA Guardian]',
+        '[NINJA Entry]',
         'LIFF logout skipped.',
         logoutError
       );
@@ -261,6 +396,140 @@
     });
   }
 
+  function isOkResponse(result) {
+    return !!result && (
+      result.status === 'ok' ||
+      result.ok === true ||
+      result.success === true
+    );
+  }
+
+  function getResponseData(result) {
+    return result &&
+      typeof result === 'object' &&
+      result.data &&
+      typeof result.data === 'object'
+        ? result.data
+        : result;
+  }
+
+  async function safePost(action, payload) {
+    try {
+      return await api.post(
+        action,
+        payload
+      );
+    } catch (error) {
+      if (
+        isExpiredLineIdTokenError(error)
+      ) {
+        throw error;
+      }
+
+      return {
+        success: false,
+        ok: false,
+        status: 'error',
+        message: getErrorMessage(error)
+      };
+    }
+  }
+
+  function normalizePlayerSessionResult(result) {
+    if (!isOkResponse(result)) {
+      return {
+        registered: false,
+        sessionToken: '',
+        player: null
+      };
+    }
+
+    const data =
+      getResponseData(result);
+
+    const sessionToken =
+      textOf(
+        data.sessionToken ||
+        result.sessionToken
+      );
+
+    const player =
+      data.player ||
+      data.playerData ||
+      result.player ||
+      null;
+
+    return {
+      registered:
+        !!sessionToken ||
+        !!player,
+
+      sessionToken:
+        sessionToken,
+
+      player:
+        player
+    };
+  }
+
+  function normalizeGuardianStatusResult(result) {
+    if (!isOkResponse(result)) {
+      return {
+        registered: false,
+        players: []
+      };
+    }
+
+    const data =
+      getResponseData(result);
+
+    const players =
+      arrayOf(
+        data.players ||
+        result.players
+      );
+
+    return {
+      registered:
+        result.registered === true ||
+        data.registered === true ||
+        players.length > 0,
+
+      players:
+        players
+    };
+  }
+
+  async function getPlayerStatus() {
+    const result =
+      await safePost(
+        'practiceSession.create',
+        {
+          idToken:
+            currentIdToken
+        }
+      );
+
+    return normalizePlayerSessionResult(
+      result
+    );
+  }
+
+  async function getGuardianStatus() {
+    const result =
+      await safePost(
+        'guardian.registrationStatus',
+        {
+          idToken:
+            currentIdToken
+        }
+      );
+
+    return normalizeGuardianStatusResult(
+      result
+    );
+  }
+
   function setDetailMessage(message) {
     if (!playerDetailPlaceholder) {
       return;
@@ -279,16 +548,105 @@
     );
   }
 
-  async function createExternalAppLaunch(appKey) {
-    if (
-      !api ||
-      typeof api.post !== 'function'
-    ) {
-      throw new Error(
-        'API機能を読み込めませんでした。'
-      );
+  function getPlayerId(player) {
+    return textOf(
+      player && player.playerId
+    );
+  }
+
+  function getPlayerName(player) {
+    return textOf(
+      player &&
+      (
+        player.playerName ||
+        player.name
+      )
+    );
+  }
+
+  function saveDefaultPlayerId(playerId) {
+    const normalizedPlayerId =
+      textOf(playerId);
+
+    if (!normalizedPlayerId) {
+      return;
     }
 
+    setLocalStorageValue(
+      DEFAULT_PLAYER_ID_KEY,
+      normalizedPlayerId
+    );
+  }
+
+  function getDefaultPlayerId() {
+    return textOf(
+      getLocalStorageValue(
+        DEFAULT_PLAYER_ID_KEY
+      )
+    );
+  }
+
+  function findPlayerById(players, playerId) {
+    const normalizedPlayerId =
+      textOf(playerId);
+
+    if (!normalizedPlayerId) {
+      return null;
+    }
+
+    return arrayOf(players).find(
+      function findPlayer(player) {
+        return getPlayerId(player) ===
+          normalizedPlayerId;
+      }
+    ) || null;
+  }
+
+  function resolveAutoLaunchPlayer(players) {
+    const list =
+      arrayOf(players);
+
+    if (list.length === 1) {
+      return list[0];
+    }
+
+    const storedPlayer =
+      findPlayerById(
+        list,
+        getDefaultPlayerId()
+      );
+
+    if (storedPlayer) {
+      return storedPlayer;
+    }
+
+    removeLocalStorageValue(
+      DEFAULT_PLAYER_ID_KEY
+    );
+
+    return null;
+  }
+
+  function selectPlayer(player) {
+    const playerId =
+      getPlayerId(player);
+
+    if (!playerId) {
+      selectedPlayerId = '';
+      return false;
+    }
+
+    selectedPlayerId =
+      playerId;
+
+    saveDefaultPlayerId(
+      playerId
+    );
+
+    return true;
+  }
+
+  async function createExternalAppLaunch(appKey) {
     if (!currentIdToken) {
       throw new Error(
         'LINE認証情報がありません。'
@@ -324,7 +682,7 @@
     );
   }
 
-  async function openExistingApp(appKey, button) {
+  async function openGuardianExistingApp(appKey, button) {
     const label =
       EXISTING_APP_LABELS[appKey] &&
       EXISTING_APP_LABELS[appKey].title
@@ -377,6 +735,22 @@
         button.disabled = false;
       }
     }
+  }
+
+  function openPlayerApp(appKey) {
+    const url =
+      PLAYER_APP_URLS[appKey];
+
+    if (!url) {
+      setStatus(
+        '開くアプリを確認できませんでした。'
+      );
+
+      return;
+    }
+
+    window.location.href =
+      url;
   }
 
   function createAppButton(appKey) {
@@ -443,7 +817,7 @@
     button.addEventListener(
       'click',
       function onClickAppButton() {
-        openExistingApp(
+        openGuardianExistingApp(
           appKey,
           button
         );
@@ -467,7 +841,7 @@
       'status-text';
 
     message.textContent =
-      '選択した選手の既存アプリを開きます。';
+      'この子どもを標準として保存しました。既存アプリを開けます。';
 
     playerDetailPlaceholder.appendChild(
       message
@@ -480,21 +854,6 @@
     playerDetailPlaceholder.appendChild(
       createAppButton('feedback')
     );
-  }
-
-  function showInviteRegistration() {
-    hideElement(playerSection);
-    hidePlayerDetail();
-
-    showElement(inviteSection);
-
-    if (inviteCodeElement) {
-      inviteCodeElement.focus();
-    }
-  }
-
-  function hideInviteRegistration() {
-    hideElement(inviteSection);
   }
 
   function hidePlayerDetail() {
@@ -512,55 +871,6 @@
 
     setDetailMessage(
       '既存アプリを開く準備ができました。'
-    );
-  }
-
-  function showPlayerSection() {
-    hidePlayerDetail();
-    showElement(playerSection);
-  }
-
-  function showPlayerDetail(player) {
-    selectedPlayerId =
-      textOf(
-        player && player.playerId
-      );
-
-    if (!selectedPlayerId) {
-      setStatus(
-        '選手情報を確認できませんでした。'
-      );
-
-      return;
-    }
-
-    if (playerDetailName) {
-      playerDetailName.textContent =
-        textOf(
-          player.playerName ||
-          player.name
-        );
-    }
-
-    if (playerDetailCategory) {
-      playerDetailCategory.textContent =
-        textOf(player.category);
-    }
-
-    hideElement(playerSection);
-    hideInviteRegistration();
-    showElement(playerDetailSection);
-
-    renderExistingAppLinks();
-
-    console.info(
-      '[NINJA Guardian Detail]',
-      {
-        success: true,
-        mode: 'external-launch-ticket',
-        playerId: selectedPlayerId,
-        idTokenLogged: false
-      }
     );
   }
 
@@ -590,10 +900,7 @@
       'player-name';
 
     name.textContent =
-      textOf(
-        player.playerName ||
-        player.name
-      );
+      getPlayerName(player);
 
     const category =
       document.createElement('p');
@@ -637,7 +944,30 @@
     card.addEventListener(
       'click',
       function onClickPlayerCard() {
-        showPlayerDetail(player);
+        if (
+          launchIntent &&
+          Object.prototype.hasOwnProperty.call(
+            EXISTING_APP_LABELS,
+            launchIntent
+          )
+        ) {
+          if (!selectPlayer(player)) {
+            setStatus(
+              '選手情報を確認できませんでした。'
+            );
+
+            return;
+          }
+
+          openGuardianExistingApp(
+            launchIntent,
+            card
+          );
+
+          return;
+        }
+
+        showGuardianPlayerDetail(player);
       }
     );
 
@@ -653,10 +983,7 @@
     registeredPlayers.forEach(
       function eachPlayer(player) {
         const playerName =
-          textOf(
-            player.playerName ||
-            player.name
-          );
+          getPlayerName(player);
 
         if (
           !playerName ||
@@ -672,16 +999,176 @@
     );
   }
 
-  function showRegisteredState(result) {
-    hideInviteRegistration();
+  function showPlayerRole() {
+    hideAllSections();
+
+    if (
+      launchIntent &&
+      PLAYER_APP_URLS[launchIntent]
+    ) {
+      setStatus(
+        EXISTING_APP_LABELS[launchIntent].title +
+        'を開いています…'
+      );
+
+      openPlayerApp(launchIntent);
+      return;
+    }
+
+    setStatus(
+      '選手登録済み'
+    );
+
+    showElement(playerRoleSection);
+  }
+
+  function showRoleChoice() {
+    hideAllSections();
+
+    setStatus(
+      '利用方法を選択してください。'
+    );
+
+    showElement(roleChoiceSection);
+  }
+
+  function showRegistrationChoice() {
+    hideAllSections();
+
+    registeredPlayers = [];
+    selectedPlayerId = '';
+    clearPlayerList();
+
+    setStatus(
+      '未登録です。登録方法を選択してください。'
+    );
+
+    showElement(registrationChoiceSection);
+  }
+
+  function showPlayerRegistrationInfo() {
+    hideAllSections();
+
+    setStatus(
+      '選手登録の案内'
+    );
+
+    showElement(playerRegistrationInfo);
+  }
+
+  function showInviteRegistration() {
+    hideAllSections();
+
+    setStatus(
+      '保護者登録'
+    );
+
+    showElement(inviteSection);
+
+    if (inviteCodeElement) {
+      inviteCodeElement.focus();
+    }
+  }
+
+  function showGuardianPlayerDetail(player) {
+    if (!selectPlayer(player)) {
+      setStatus(
+        '選手情報を確認できませんでした。'
+      );
+
+      return;
+    }
+
+    if (playerDetailName) {
+      playerDetailName.textContent =
+        getPlayerName(player);
+    }
+
+    if (playerDetailCategory) {
+      playerDetailCategory.textContent =
+        textOf(player.category);
+    }
+
+    hideAllSections();
+    showElement(playerDetailSection);
+
+    renderExistingAppLinks();
+
+    setStatus(
+      '標準の子どもを保存しました。'
+    );
+
+    console.info(
+      '[NINJA Guardian Detail]',
+      {
+        success: true,
+        mode: 'guardian-external-launch-default-player',
+        playerId: selectedPlayerId,
+        idTokenLogged: false
+      }
+    );
+  }
+
+  async function showGuardianRole() {
+    hideAllSections();
     hidePlayerDetail();
 
     const players =
       arrayOf(
-        result && result.players
+        guardianStatus &&
+        guardianStatus.players
       );
 
     renderPlayers(players);
+
+    if (
+      launchIntent &&
+      Object.prototype.hasOwnProperty.call(
+        EXISTING_APP_LABELS,
+        launchIntent
+      )
+    ) {
+      const targetPlayer =
+        resolveAutoLaunchPlayer(players);
+
+      if (targetPlayer) {
+        selectPlayer(targetPlayer);
+
+        const label =
+          EXISTING_APP_LABELS[launchIntent].title;
+
+        setStatus(
+          getPlayerName(targetPlayer) +
+          'の' +
+          label +
+          'を開いています…'
+        );
+
+        await openGuardianExistingApp(
+          launchIntent,
+          null
+        );
+
+        return;
+      }
+
+      if (playerSectionLead) {
+        playerSectionLead.textContent =
+          '閲覧する子どもを選択してください。次回から自動で開きます。';
+      }
+
+      setStatus(
+        '表示する子どもを選択してください。'
+      );
+
+      showElement(playerSection);
+      return;
+    }
+
+    if (playerSectionLead) {
+      playerSectionLead.textContent =
+        '閲覧する子どもを選択してください。';
+    }
 
     setStatus(
       '保護者登録済み'
@@ -690,58 +1177,28 @@
     if (players.length) {
       showElement(playerSection);
     } else {
-      hideElement(playerSection);
+      setStatus(
+        '保護者登録済みですが、登録選手を確認できませんでした。'
+      );
     }
   }
 
   function handlePlayerDetailBack() {
-    if (!registeredPlayers.length) {
-      hidePlayerDetail();
+    if (
+      guardianStatus &&
+      guardianStatus.registered
+    ) {
+      showGuardianRole();
       return;
     }
 
+    hideAllSections();
     setStatus(
-      '保護者登録済み'
-    );
-
-    showPlayerSection();
-  }
-
-  async function getRegistrationStatus() {
-    if (
-      !api ||
-      typeof api.post !== 'function'
-    ) {
-      throw new Error(
-        'API機能を読み込めませんでした。'
-      );
-    }
-
-    if (!currentIdToken) {
-      throw new Error(
-        'LINE認証情報がありません。'
-      );
-    }
-
-    return api.post(
-      'guardian.registrationStatus',
-      {
-        idToken:
-          currentIdToken
-      }
+      '登録状況を確認してください。'
     );
   }
 
   async function claimInvite(inviteCode) {
-    if (
-      !api ||
-      typeof api.post !== 'function'
-    ) {
-      throw new Error(
-        'API機能を読み込めませんでした。'
-      );
-    }
-
     if (!currentIdToken) {
       throw new Error(
         'LINE認証情報がありません。'
@@ -768,35 +1225,6 @@
     if (inviteSubmit) {
       inviteSubmit.disabled = true;
     }
-  }
-
-  async function applyRegistrationState() {
-    setStatus(
-      '保護者登録状況を確認しています…'
-    );
-
-    const result =
-      await getRegistrationStatus();
-
-    if (
-      result &&
-      result.registered === true
-    ) {
-      showRegisteredState(result);
-      return;
-    }
-
-    registeredPlayers = [];
-
-    clearPlayerList();
-    hideElement(playerSection);
-    hidePlayerDetail();
-
-    setStatus(
-      'LINE認証完了'
-    );
-
-    showInviteRegistration();
   }
 
   async function handleInviteSubmit(event) {
@@ -837,7 +1265,10 @@
 
       setInviteStatus('');
 
-      await applyRegistrationState();
+      guardianStatus =
+        await getGuardianStatus();
+
+      await showGuardianRole();
     } catch (error) {
       if (
         isExpiredLineIdTokenError(error)
@@ -863,18 +1294,71 @@
     }
   }
 
+  async function applyDetectedState() {
+    const isPlayerRegistered =
+      !!(
+        playerStatus &&
+        playerStatus.registered
+      );
+
+    const isGuardianRegistered =
+      !!(
+        guardianStatus &&
+        guardianStatus.registered
+      );
+
+    if (
+      requestedRole === 'guardian' &&
+      isGuardianRegistered
+    ) {
+      await showGuardianRole();
+      return;
+    }
+
+    if (
+      requestedRole === 'player' &&
+      isPlayerRegistered
+    ) {
+      showPlayerRole();
+      return;
+    }
+
+    if (
+      isPlayerRegistered &&
+      isGuardianRegistered
+    ) {
+      showRoleChoice();
+      return;
+    }
+
+    if (isGuardianRegistered) {
+      await showGuardianRole();
+      return;
+    }
+
+    if (isPlayerRegistered) {
+      showPlayerRole();
+      return;
+    }
+
+    showRegistrationChoice();
+  }
+
   async function start() {
     setStatus(
       '設定を確認しています…'
     );
 
+    currentIdToken = '';
     registeredPlayers = [];
     selectedPlayerId = '';
+    launchIntent = getRequestedOpenIntent();
+    requestedRole = getRequestedRole();
+    playerStatus = null;
+    guardianStatus = null;
 
     clearPlayerList();
-    hideElement(playerSection);
-    hidePlayerDetail();
-    hideInviteRegistration();
+    hideAllSections();
 
     if (
       !config ||
@@ -886,7 +1370,7 @@
       );
 
       console.error(
-        '[NINJA Guardian] config missing.'
+        '[NINJA Entry] config missing.'
       );
 
       return;
@@ -901,7 +1385,7 @@
       );
 
       console.error(
-        '[NINJA Guardian] api missing.'
+        '[NINJA Entry] api missing.'
       );
 
       return;
@@ -913,7 +1397,7 @@
       );
 
       console.error(
-        '[NINJA Guardian] LIFF SDK missing.'
+        '[NINJA Entry] LIFF SDK missing.'
       );
 
       return;
@@ -972,20 +1456,50 @@
             idToken
         });
 
-      await applyRegistrationState();
+      setStatus(
+        '登録状況を確認しています…'
+      );
+
+      const results =
+        await Promise.all([
+          getPlayerStatus(),
+          getGuardianStatus()
+        ]);
+
+      playerStatus =
+        results[0];
+
+      guardianStatus =
+        results[1];
+
+      await applyDetectedState();
 
       removeSessionStorageValue(
         LINE_AUTH_RETRY_KEY
       );
 
       console.info(
-        '[NINJA Guardian]',
+        '[NINJA Entry]',
         {
           liffReady: true,
           loggedIn: true,
           idTokenAvailable: true,
-          mode: 'external-launch-ticket',
-          idTokenLogged: false
+          playerRegistered:
+            !!(
+              playerStatus &&
+              playerStatus.registered
+            ),
+          guardianRegistered:
+            !!(
+              guardianStatus &&
+              guardianStatus.registered
+            ),
+          requestedRole:
+            requestedRole,
+          open:
+            launchIntent,
+          idTokenLogged:
+            false
         }
       );
     } catch (error) {
@@ -997,16 +1511,14 @@
       }
 
       clearPlayerList();
-      hideElement(playerSection);
-      hidePlayerDetail();
-      hideInviteRegistration();
+      hideAllSections();
 
       setStatus(
-        '保護者登録状況の確認に失敗しました。'
+        '登録状況の確認に失敗しました。'
       );
 
       console.error(
-        '[NINJA Guardian]',
+        '[NINJA Entry]',
         error
       );
     }
@@ -1023,6 +1535,68 @@
     playerDetailBack.addEventListener(
       'click',
       handlePlayerDetailBack
+    );
+  }
+
+  if (usePlayerRoleButton) {
+    usePlayerRoleButton.addEventListener(
+      'click',
+      showPlayerRole
+    );
+  }
+
+  if (useGuardianRoleButton) {
+    useGuardianRoleButton.addEventListener(
+      'click',
+      function onClickGuardianRole() {
+        showGuardianRole();
+      }
+    );
+  }
+
+  if (playerOpenGrowthButton) {
+    playerOpenGrowthButton.addEventListener(
+      'click',
+      function onClickPlayerGrowth() {
+        openPlayerApp('growth');
+      }
+    );
+  }
+
+  if (playerOpenFeedbackButton) {
+    playerOpenFeedbackButton.addEventListener(
+      'click',
+      function onClickPlayerFeedback() {
+        openPlayerApp('feedback');
+      }
+    );
+  }
+
+  if (startPlayerRegistrationButton) {
+    startPlayerRegistrationButton.addEventListener(
+      'click',
+      showPlayerRegistrationInfo
+    );
+  }
+
+  if (startGuardianRegistrationButton) {
+    startGuardianRegistrationButton.addEventListener(
+      'click',
+      showInviteRegistration
+    );
+  }
+
+  if (playerRegistrationBack) {
+    playerRegistrationBack.addEventListener(
+      'click',
+      showRegistrationChoice
+    );
+  }
+
+  if (inviteBack) {
+    inviteBack.addEventListener(
+      'click',
+      showRegistrationChoice
     );
   }
 
