@@ -133,7 +133,6 @@ h2 {
   border-radius: var(--radius-md);
 
   text-align: left;
-
   cursor: pointer;
 
   -webkit-tap-highlight-color: transparent;
@@ -261,6 +260,9 @@ h2 {
 .growth-card,
 .feedback-card,
 .agility-card,
+.shooting-card,
+.advice-card,
+.schedule-card,
 .detail-error-card {
   padding: var(--space-3);
 
@@ -273,6 +275,9 @@ h2 {
 .growth-card-title,
 .feedback-card-title,
 .agility-card-title,
+.shooting-card-title,
+.advice-card-title,
+.schedule-card-title,
 .detail-error-title {
   margin: 0 0 var(--space-2);
 
@@ -284,7 +289,9 @@ h2 {
 }
 
 .growth-latest-date,
-.feedback-saved-at {
+.feedback-saved-at,
+.advice-date,
+.schedule-meta {
   margin: 0 0 var(--space-3);
 
   color: var(--color-muted);
@@ -293,7 +300,8 @@ h2 {
   line-height: 1.5;
 }
 
-.growth-values {
+.growth-values,
+.shooting-values {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-2);
@@ -301,7 +309,8 @@ h2 {
   margin: 0 0 var(--space-3);
 }
 
-.growth-value-item {
+.growth-value-item,
+.shooting-value-item {
   padding: var(--space-2);
 
   background: var(--color-soft);
@@ -310,7 +319,8 @@ h2 {
   border-radius: var(--radius-md);
 }
 
-.growth-value-label {
+.growth-value-label,
+.shooting-value-label {
   margin: 0 0 4px;
 
   color: var(--color-muted);
@@ -320,7 +330,8 @@ h2 {
   line-height: 1.4;
 }
 
-.growth-value-number {
+.growth-value-number,
+.shooting-value-number {
   margin: 0;
 
   color: var(--color-text);
@@ -331,7 +342,8 @@ h2 {
 }
 
 .growth-record-count,
-.agility-record-count {
+.agility-record-count,
+.shooting-record-count {
   margin: 0;
 
   color: var(--color-muted);
@@ -340,7 +352,9 @@ h2 {
   line-height: 1.5;
 }
 
-.feedback-text {
+.feedback-text,
+.advice-text,
+.schedule-note {
   margin: 0;
 
   color: var(--color-text);
@@ -352,7 +366,8 @@ h2 {
   overflow-wrap: anywhere;
 }
 
-.feedback-empty {
+.feedback-empty,
+.card-empty {
   margin: 0;
 
   color: var(--color-muted);
@@ -361,14 +376,18 @@ h2 {
   line-height: 1.7;
 }
 
-.agility-list {
+.agility-list,
+.advice-list,
+.schedule-list {
   display: grid;
   gap: var(--space-2);
 
   margin: 0 0 var(--space-3);
 }
 
-.agility-item {
+.agility-item,
+.advice-item,
+.schedule-item {
   padding: var(--space-2);
 
   background: var(--color-soft);
@@ -377,7 +396,8 @@ h2 {
   border-radius: var(--radius-md);
 }
 
-.agility-item-header {
+.agility-item-header,
+.schedule-item-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -387,7 +407,9 @@ h2 {
   margin-bottom: 6px;
 }
 
-.agility-type {
+.agility-type,
+.schedule-title,
+.advice-title {
   margin: 0;
 
   color: var(--color-text);
@@ -397,7 +419,9 @@ h2 {
   line-height: 1.5;
 }
 
-.agility-date {
+.agility-date,
+.schedule-date,
+.schedule-time {
   margin: 0;
 
   color: var(--color-muted);
@@ -498,20 +522,13 @@ h2 {
     font-size: 22px;
   }
 
-  .growth-values {
+  .growth-values,
+  .shooting-values {
     grid-template-columns: 1fr;
   }
 
-  .growth-value-number {
+  .growth-value-number,
+  .shooting-value-number {
     font-size: 21px;
-  }
-
-  .agility-item-header {
-    display: grid;
-    gap: 2px;
-  }
-
-  .agility-date {
-    white-space: normal;
   }
 }
