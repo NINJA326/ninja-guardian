@@ -338,6 +338,24 @@
     return String(value) + unit;
   }
 
+  function formatAgilityValue(record) {
+    if (
+      !record ||
+      record.value === null ||
+      record.value === undefined ||
+      record.value === ''
+    ) {
+      return '未記録';
+    }
+
+    const unit =
+      String(
+        record.unit || ''
+      ).trim();
+
+    return String(record.value) + unit;
+  }
+
   function createGrowthValueItem(
     labelText,
     valueText
@@ -683,11 +701,242 @@
     return card;
   }
 
+  function getLatestAgilityRecordsByType(records) {
+    const latestByType = {};
+
+    records.forEach(
+      function(record) {
+        const type =
+          String(
+            record && record.type
+              ? record.type
+              : ''
+          ).trim();
+
+        if (!type) {
+          return;
+        }
+
+        const current =
+          latestByType[type];
+
+        if (
+          !current ||
+          String(record.date || '').localeCompare(
+            String(current.date || '')
+          ) >= 0
+        ) {
+          latestByType[type] =
+            record;
+        }
+      }
+    );
+
+    return Object.keys(latestByType)
+      .sort()
+      .map(
+        function(type) {
+          return latestByType[type];
+        }
+      );
+  }
+
+  function createAgilityItem(record) {
+    const item =
+      document.createElement(
+        'div'
+      );
+
+    item.className =
+      'agility-item';
+
+    const header =
+      document.createElement(
+        'div'
+      );
+
+    header.className =
+      'agility-item-header';
+
+    const type =
+      document.createElement(
+        'p'
+      );
+
+    type.className =
+      'agility-type';
+
+    type.textContent =
+      String(
+        record && record.type
+          ? record.type
+          : ''
+      ).trim();
+
+    const date =
+      document.createElement(
+        'p'
+      );
+
+    date.className =
+      'agility-date';
+
+    date.textContent =
+      String(
+        record && record.date
+          ? record.date
+          : ''
+      ).trim();
+
+    const value =
+      document.createElement(
+        'p'
+      );
+
+    value.className =
+      'agility-value';
+
+    value.textContent =
+      formatAgilityValue(
+        record
+      );
+
+    header.appendChild(
+      type
+    );
+
+    if (date.textContent) {
+      header.appendChild(
+        date
+      );
+    }
+
+    item.appendChild(
+      header
+    );
+
+    item.appendChild(
+      value
+    );
+
+    return item;
+  }
+
+  function createAgilityCard(result) {
+    const data =
+      result &&
+      result.data &&
+      typeof result.data === 'object'
+        ? result.data
+        : {};
+
+    const agility =
+      data.agility &&
+      typeof data.agility === 'object'
+        ? data.agility
+        : {};
+
+    const records =
+      Array.isArray(agility.records)
+        ? agility.records
+        : [];
+
+    const card =
+      document.createElement(
+        'section'
+      );
+
+    card.className =
+      'agility-card';
+
+    const title =
+      document.createElement(
+        'h3'
+      );
+
+    title.className =
+      'agility-card-title';
+
+    title.textContent =
+      'アジリティ';
+
+    card.appendChild(
+      title
+    );
+
+    if (!records.length) {
+      const empty =
+        document.createElement(
+          'p'
+        );
+
+      empty.className =
+        'feedback-empty';
+
+      empty.textContent =
+        'アジリティ記録はまだありません。';
+
+      card.appendChild(
+        empty
+      );
+
+      return card;
+    }
+
+    const latestRecords =
+      getLatestAgilityRecordsByType(
+        records
+      );
+
+    const list =
+      document.createElement(
+        'div'
+      );
+
+    list.className =
+      'agility-list';
+
+    latestRecords.forEach(
+      function(record) {
+        list.appendChild(
+          createAgilityItem(
+            record
+          )
+        );
+      }
+    );
+
+    const count =
+      document.createElement(
+        'p'
+      );
+
+    count.className =
+      'agility-record-count';
+
+    count.textContent =
+      '記録件数：' +
+      String(records.length) +
+      '件';
+
+    card.appendChild(
+      list
+    );
+
+    card.appendChild(
+      count
+    );
+
+    return card;
+  }
+
   function renderPlayerDetailData(
     growthResult,
     growthError,
     feedbackResult,
-    feedbackError
+    feedbackError,
+    agilityResult,
+    agilityError
   ) {
     if (!playerDetailPlaceholder) {
       return;
@@ -723,6 +972,22 @@
       playerDetailPlaceholder.appendChild(
         createFeedbackCard(
           feedbackResult
+        )
+      );
+    }
+
+    if (agilityError) {
+      playerDetailPlaceholder.appendChild(
+        createDetailErrorCard(
+          'アジリティ',
+          agilityError.message ||
+          'アジリティ記録を取得できませんでした。'
+        )
+      );
+    } else {
+      playerDetailPlaceholder.appendChild(
+        createAgilityCard(
+          agilityResult
         )
       );
     }
@@ -804,6 +1069,44 @@
     );
   }
 
+  async function getPlayerAgility(
+    playerId
+  ) {
+    if (!api || !api.post) {
+      throw new Error(
+        'API機能を読み込めませんでした。'
+      );
+    }
+
+    if (!currentIdToken) {
+      throw new Error(
+        'LINE認証情報がありません。'
+      );
+    }
+
+    const normalizedPlayerId =
+      String(
+        playerId || ''
+      ).trim();
+
+    if (!normalizedPlayerId) {
+      throw new Error(
+        '選手IDがありません。'
+      );
+    }
+
+    return api.post(
+      'guardian.playerAgility',
+      {
+        idToken:
+          currentIdToken,
+
+        playerId:
+          normalizedPlayerId
+      }
+    );
+  }
+
   async function loadPlayerDetailData(
     playerId
   ) {
@@ -822,6 +1125,9 @@
           normalizedPlayerId
         ),
         getPlayerFeedback(
+          normalizedPlayerId
+        ),
+        getPlayerAgility(
           normalizedPlayerId
         )
       ]);
@@ -853,17 +1159,31 @@
         ? results[1].reason
         : null;
 
+    const agilityResult =
+      results[2].status === 'fulfilled'
+        ? results[2].value
+        : null;
+
+    const agilityError =
+      results[2].status === 'rejected'
+        ? results[2].reason
+        : null;
+
     if (
       isExpiredLineIdTokenError(
         growthError
       ) ||
       isExpiredLineIdTokenError(
         feedbackError
+      ) ||
+      isExpiredLineIdTokenError(
+        agilityError
       )
     ) {
       restartLineLogin(
         growthError ||
-        feedbackError
+        feedbackError ||
+        agilityError
       );
 
       return;
@@ -873,7 +1193,9 @@
       growthResult,
       growthError,
       feedbackResult,
-      feedbackError
+      feedbackError,
+      agilityResult,
+      agilityError
     );
 
     console.info(
@@ -886,6 +1208,8 @@
           !growthError,
         feedbackLoaded:
           !feedbackError,
+        agilityLoaded:
+          !agilityError,
         idTokenLogged:
           false
       }
