@@ -44,15 +44,19 @@
     document.getElementById('invite-status');
 
   const LINE_AUTH_RETRY_KEY =
-    'ninjaGuardianLineAuthRetryStep29';
+    'ninjaGuardianLineAuthRetryStep33';
 
-  const EXISTING_APP_LINKS =
+  const EXISTING_APP_LABELS =
     Object.freeze({
-      growth:
-        'https://liff.line.me/2010789200-zVWWxqSQ',
+      growth: {
+        title: '成長記録',
+        description: '選択した選手の成長記録を開く'
+      },
 
-      feedback:
-        'https://liff.line.me/2010789200-osUDbuzD'
+      feedback: {
+        title: 'フィードバック',
+        description: '選択した選手のフィードバックを開く'
+      }
     });
 
   let currentIdToken = '';
@@ -275,11 +279,110 @@
     );
   }
 
-  function createAppButton(
-    title,
-    description,
-    url
-  ) {
+  async function createExternalAppLaunch(appKey) {
+    if (
+      !api ||
+      typeof api.post !== 'function'
+    ) {
+      throw new Error(
+        'API機能を読み込めませんでした。'
+      );
+    }
+
+    if (!currentIdToken) {
+      throw new Error(
+        'LINE認証情報がありません。'
+      );
+    }
+
+    if (!selectedPlayerId) {
+      throw new Error(
+        '選手が選択されていません。'
+      );
+    }
+
+    return api.post(
+      'guardian.externalAppLaunch.create',
+      {
+        idToken:
+          currentIdToken,
+
+        playerId:
+          selectedPlayerId,
+
+        appKey:
+          appKey
+      }
+    );
+  }
+
+  function getLaunchUrl(result) {
+    return textOf(
+      result &&
+      result.data &&
+      result.data.launchUrl
+    );
+  }
+
+  async function openExistingApp(appKey, button) {
+    const label =
+      EXISTING_APP_LABELS[appKey] &&
+      EXISTING_APP_LABELS[appKey].title
+        ? EXISTING_APP_LABELS[appKey].title
+        : '既存アプリ';
+
+    if (button) {
+      button.disabled = true;
+    }
+
+    setStatus(
+      label + 'を開く準備をしています…'
+    );
+
+    try {
+      const result =
+        await createExternalAppLaunch(appKey);
+
+      const launchUrl =
+        getLaunchUrl(result);
+
+      if (!launchUrl) {
+        throw new Error(
+          label + 'を開くURLを取得できませんでした。'
+        );
+      }
+
+      window.location.href =
+        launchUrl;
+    } catch (error) {
+      if (
+        isExpiredLineIdTokenError(error)
+      ) {
+        restartLineLogin(error);
+        return;
+      }
+
+      setStatus(
+        error && error.message
+          ? error.message
+          : label + 'を開けませんでした。'
+      );
+
+      console.error(
+        '[NINJA Guardian External Launch]',
+        error
+      );
+
+      if (button) {
+        button.disabled = false;
+      }
+    }
+  }
+
+  function createAppButton(appKey) {
+    const app =
+      EXISTING_APP_LABELS[appKey];
+
     const button =
       document.createElement('button');
 
@@ -305,7 +408,7 @@
       'player-name';
 
     name.textContent =
-      title;
+      app.title;
 
     const category =
       document.createElement('p');
@@ -314,7 +417,7 @@
       'player-category';
 
     category.textContent =
-      description;
+      app.description;
 
     const arrow =
       document.createElement('span');
@@ -339,8 +442,11 @@
 
     button.addEventListener(
       'click',
-      function openExistingApp() {
-        window.location.href = url;
+      function onClickAppButton() {
+        openExistingApp(
+          appKey,
+          button
+        );
       }
     );
 
@@ -361,26 +467,18 @@
       'status-text';
 
     message.textContent =
-      '既存アプリをそのまま開きます。';
+      '選択した選手の既存アプリを開きます。';
 
     playerDetailPlaceholder.appendChild(
       message
     );
 
     playerDetailPlaceholder.appendChild(
-      createAppButton(
-        '成長記録',
-        '身体測定・アジリティなど',
-        EXISTING_APP_LINKS.growth
-      )
+      createAppButton('growth')
     );
 
     playerDetailPlaceholder.appendChild(
-      createAppButton(
-        'フィードバック',
-        'コーチ所見・フィードバック',
-        EXISTING_APP_LINKS.feedback
-      )
+      createAppButton('feedback')
     );
   }
 
@@ -459,7 +557,7 @@
       '[NINJA Guardian Detail]',
       {
         success: true,
-        mode: 'existing-app-links',
+        mode: 'external-launch-ticket',
         playerId: selectedPlayerId,
         idTokenLogged: false
       }
@@ -886,7 +984,7 @@
           liffReady: true,
           loggedIn: true,
           idTokenAvailable: true,
-          mode: 'existing-app-links',
+          mode: 'external-launch-ticket',
           idTokenLogged: false
         }
       );
