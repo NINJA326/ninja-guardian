@@ -83,19 +83,22 @@
     document.getElementById('invite-status');
 
   const LINE_AUTH_RETRY_KEY =
-    'ninjaOfficialEntryLineAuthRetryStep45';
+    'ninjaOfficialEntryLineAuthRetryStep50';
 
   const DEFAULT_PLAYER_ID_KEY =
-    'ninjaGuardianDefaultPlayerIdStep45';
+    'ninjaGuardianDefaultPlayerIdStep50';
 
   const STATE_CACHE_PREFIX =
-    'ninjaOfficialEntryStateCacheStep45:';
+    'ninjaOfficialEntryStateCacheStep50:';
 
   const STATE_CACHE_VERSION =
-    'step45-entry-state-cache-v1';
+    'step64-guardian-rich-menu-background-apply-v1';
 
   const STATE_CACHE_TTL_MS =
     7 * 24 * 60 * 60 * 1000;
+
+  const GUARDIAN_RICH_MENU_APPLY_KEY_PREFIX =
+    'ninjaGuardianRichMenuAppliedStep64:';
 
   const PLAYER_APP_URLS =
     Object.freeze({
@@ -687,7 +690,7 @@
       );
 
       console.error(
-        '[NINJA Entry]',
+        '[NINJA Official Entry]',
         error
       );
 
@@ -712,7 +715,7 @@
       }
     } catch (logoutError) {
       console.warn(
-        '[NINJA Entry]',
+        '[NINJA Official Entry]',
         'LIFF logout skipped.',
         logoutError
       );
@@ -821,6 +824,7 @@
       return {
         registered: false,
         players: [],
+        guardian: null,
         checked: !isCommunicationFailureMessage(
           result && result.message
         )
@@ -844,6 +848,11 @@
 
       players:
         players,
+
+      guardian:
+        data.guardian ||
+        result.guardian ||
+        null,
 
       checked: true
     };
@@ -1458,6 +1467,101 @@
     );
   }
 
+  function getGuardianIdForRichMenuApply() {
+    return textOf(
+      guardianStatus &&
+      guardianStatus.guardian &&
+      guardianStatus.guardian.guardianId
+    );
+  }
+
+  function getGuardianRichMenuApplyStorageKey() {
+    const guardianId =
+      getGuardianIdForRichMenuApply();
+
+    if (guardianId) {
+      return (
+        GUARDIAN_RICH_MENU_APPLY_KEY_PREFIX +
+        guardianId
+      );
+    }
+
+    if (currentUserCacheKey) {
+      return (
+        GUARDIAN_RICH_MENU_APPLY_KEY_PREFIX +
+        currentUserCacheKey
+      );
+    }
+
+    return '';
+  }
+
+  function hasAppliedGuardianRichMenu() {
+    const key =
+      getGuardianRichMenuApplyStorageKey();
+
+    if (!key) {
+      return false;
+    }
+
+    return getLocalStorageValue(key) === '1';
+  }
+
+  function markGuardianRichMenuApplied() {
+    const key =
+      getGuardianRichMenuApplyStorageKey();
+
+    if (!key) {
+      return;
+    }
+
+    setLocalStorageValue(key, '1');
+  }
+
+  async function applyGuardianRichMenuInBackground() {
+    if (
+      !currentIdToken ||
+      !guardianStatus ||
+      guardianStatus.registered !== true
+    ) {
+      return;
+    }
+
+    if (hasAppliedGuardianRichMenu()) {
+      return;
+    }
+
+    try {
+      const result =
+        await api.post(
+          'guardian.richMenu.applyGuardian',
+          {
+            idToken:
+              currentIdToken
+          }
+        );
+
+      if (isOkResponse(result)) {
+        markGuardianRichMenuApplied();
+
+        console.info(
+          '[NINJA Guardian RichMenu]',
+          {
+            applied: true,
+            mode: 'background',
+            idTokenLogged: false
+          }
+        );
+      }
+    } catch (error) {
+      console.warn(
+        '[NINJA Guardian RichMenu]',
+        '保護者用リッチメニュー適用は後で再試行します。',
+        error
+      );
+    }
+  }
+
   async function showGuardianRole() {
     hideAllSections();
     hidePlayerDetail();
@@ -1469,6 +1573,8 @@
       );
 
     renderPlayers(players);
+
+    applyGuardianRichMenuInBackground();
 
     if (
       launchIntent &&
@@ -1658,19 +1764,31 @@
         guardianStatus.registered
       );
 
-    if (
-      requestedRole === 'guardian' &&
-      isGuardianRegistered
-    ) {
-      await showGuardianRole();
+    if (requestedRole === 'guardian') {
+      if (isGuardianRegistered) {
+        await showGuardianRole();
+        return;
+      }
+
+      setStatus(
+        'このLINEで保護者登録を開始してください。'
+      );
+
+      showInviteRegistration();
       return;
     }
 
-    if (
-      requestedRole === 'player' &&
-      isPlayerRegistered
-    ) {
-      showPlayerRole();
+    if (requestedRole === 'player') {
+      if (isPlayerRegistered) {
+        showPlayerRole();
+        return;
+      }
+
+      setStatus(
+        'このLINEで選手登録を開始してください。'
+      );
+
+      showPlayerRegistrationInfo();
       return;
     }
 
@@ -1723,7 +1841,7 @@
       );
 
       console.error(
-        '[NINJA Entry] config missing.'
+        '[NINJA Official Entry] config missing.'
       );
 
       return;
@@ -1738,7 +1856,7 @@
       );
 
       console.error(
-        '[NINJA Entry] api missing.'
+        '[NINJA Official Entry] api missing.'
       );
 
       return;
@@ -1750,7 +1868,7 @@
       );
 
       console.error(
-        '[NINJA Entry] LIFF SDK missing.'
+        '[NINJA Official Entry] LIFF SDK missing.'
       );
 
       return;
@@ -1863,7 +1981,7 @@
       );
 
       console.info(
-        '[NINJA Entry]',
+        '[NINJA Official Entry]',
         {
           liffReady: true,
           loggedIn: true,
@@ -1902,7 +2020,7 @@
         );
 
         console.error(
-          '[NINJA Entry]',
+          '[NINJA Official Entry]',
           error
         );
 
@@ -1917,7 +2035,7 @@
       );
 
       console.error(
-        '[NINJA Entry]',
+        '[NINJA Official Entry]',
         error
       );
     }
