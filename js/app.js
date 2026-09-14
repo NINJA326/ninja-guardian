@@ -92,7 +92,7 @@
     'ninjaOfficialEntryStateCacheStep50:';
 
   const STATE_CACHE_VERSION =
-    'step64-guardian-rich-menu-background-apply-v1';
+    'step70-guardian-top-minimal-v1';
 
   const STATE_CACHE_TTL_MS =
     7 * 24 * 60 * 60 * 1000;
@@ -1199,18 +1199,10 @@
       'status-text';
 
     message.textContent =
-      'この子どもを標準として保存しました。既存アプリを開けます。';
+      'この子どもを標準として保存しました。成長記録・フィードバックはLINEの保護者メニューから開いてください。';
 
     playerDetailPlaceholder.appendChild(
       message
-    );
-
-    playerDetailPlaceholder.appendChild(
-      createAppButton('growth')
-    );
-
-    playerDetailPlaceholder.appendChild(
-      createAppButton('feedback')
     );
   }
 
@@ -1228,7 +1220,7 @@
     }
 
     setDetailMessage(
-      '既存アプリを開く準備ができました。'
+      '標準の子どもを保存しました。成長記録・フィードバックはLINEの保護者メニューから開いてください。'
     );
   }
 
