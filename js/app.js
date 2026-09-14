@@ -64,6 +64,36 @@
   const playerRegistrationBack =
     document.getElementById('player-registration-back');
 
+  const playerRegistrationForm =
+    document.getElementById('player-registration-form');
+
+  const playerTeamCodeInput =
+    document.getElementById('player-team-code');
+
+  const playerNameInput =
+    document.getElementById('player-name-input');
+
+  const playerFuriganaInput =
+    document.getElementById('player-furigana-input');
+
+  const playerGradeInput =
+    document.getElementById('player-grade-input');
+
+  const playerCategoryInput =
+    document.getElementById('player-category-input');
+
+  const playerPasswordInput =
+    document.getElementById('player-password-input');
+
+  const playerPasswordConfirmInput =
+    document.getElementById('player-password-confirm-input');
+
+  const playerRegistrationSubmit =
+    document.getElementById('player-registration-submit');
+
+  const playerRegistrationStatus =
+    document.getElementById('player-registration-status');
+
   const inviteSection =
     document.getElementById('invite-section');
 
@@ -92,7 +122,7 @@
     'ninjaOfficialEntryStateCacheStep50:';
 
   const STATE_CACHE_VERSION =
-    'step79-logout-entry-before-liff-v1';
+    'step98-player-self-registration-form-v1';
 
   const STATE_CACHE_TTL_MS =
     7 * 24 * 60 * 60 * 1000;
@@ -162,6 +192,13 @@
     }
   }
 
+  function setPlayerRegistrationStatus(message) {
+    if (playerRegistrationStatus) {
+      playerRegistrationStatus.textContent =
+        message || '';
+    }
+  }
+
   function showElement(element) {
     if (element) {
       element.hidden = false;
@@ -202,6 +239,49 @@
 
   function validateInviteCode(value) {
     return /^[A-Z0-9]{10}$/.test(value);
+  }
+
+  function normalizeTeamCode(value) {
+    return String(value || '')
+      .normalize('NFKC')
+      .replace(/\s+/g, '')
+      .toUpperCase();
+  }
+
+  function normalizePlayerName(value) {
+    return String(value || '')
+      .normalize('NFKC')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function normalizePassword(value) {
+    return String(value || '')
+      .normalize('NFKC')
+      .trim();
+  }
+
+  function validatePassword(password, passwordConfirm) {
+    if (!password) {
+      return 'パスワードを入力してください。';
+    }
+
+    if (
+      password.length < 4 ||
+      password.length > 20
+    ) {
+      return 'パスワードは4〜20文字で入力してください。';
+    }
+
+    if (!/^[A-Za-z0-9]+$/.test(password)) {
+      return 'パスワードは半角英数字で入力してください。';
+    }
+
+    if (password !== passwordConfirm) {
+      return '確認用パスワードが一致しません。';
+    }
+
+    return '';
   }
 
   function getErrorMessage(error) {
@@ -787,6 +867,74 @@
         message: getErrorMessage(error)
       };
     }
+  }
+
+  async function postLinePlayerApi(action, payload) {
+    const apiUrl =
+      textOf(
+        config.LINE_PLAYER_API_URL ||
+        config.API_URL
+      );
+
+    if (!apiUrl) {
+      throw new Error(
+        '選手登録APIのURLが設定されていません。'
+      );
+    }
+
+    const response =
+      await fetch(
+        apiUrl,
+        {
+          method:
+            'POST',
+
+          headers:
+            {
+              'Content-Type':
+                'text/plain;charset=utf-8'
+            },
+
+          body:
+            JSON.stringify(
+              Object.assign(
+                {
+                  action:
+                    action
+                },
+                payload || {}
+              )
+            )
+        }
+      );
+
+    const responseText =
+      await response.text();
+
+    let result;
+
+    try {
+      result =
+        responseText
+          ? JSON.parse(responseText)
+          : {};
+    } catch (error) {
+      throw new Error(
+        '選手登録APIの応答を解析できませんでした。'
+      );
+    }
+
+    if (
+      !response.ok ||
+      !isOkResponse(result)
+    ) {
+      throw new Error(
+        getErrorMessage(result) ||
+        '選手登録に失敗しました。'
+      );
+    }
+
+    return result;
   }
 
   function normalizePlayerSessionResult(result) {
@@ -1451,10 +1599,20 @@
     hideAllSections();
 
     setStatus(
-      '選手登録の案内'
+      '選手登録'
     );
 
+    setPlayerRegistrationStatus('');
+
+    if (playerRegistrationSubmit) {
+      playerRegistrationSubmit.disabled = false;
+    }
+
     showElement(playerRegistrationInfo);
+
+    if (playerTeamCodeInput) {
+      playerTeamCodeInput.focus();
+    }
   }
 
   function showInviteRegistration() {
@@ -1694,6 +1852,250 @@
     setStatus(
       '登録状況を確認してください。'
     );
+  }
+
+  function readPlayerRegistrationForm() {
+    return {
+      teamCode:
+        normalizeTeamCode(
+          playerTeamCodeInput
+            ? playerTeamCodeInput.value
+            : ''
+        ),
+
+      playerName:
+        normalizePlayerName(
+          playerNameInput
+            ? playerNameInput.value
+            : ''
+        ),
+
+      furigana:
+        normalizePlayerName(
+          playerFuriganaInput
+            ? playerFuriganaInput.value
+            : ''
+        ),
+
+      grade:
+        textOf(
+          playerGradeInput
+            ? playerGradeInput.value
+            : ''
+        ),
+
+      category:
+        textOf(
+          playerCategoryInput
+            ? playerCategoryInput.value
+            : ''
+        ),
+
+      password:
+        normalizePassword(
+          playerPasswordInput
+            ? playerPasswordInput.value
+            : ''
+        ),
+
+      passwordConfirm:
+        normalizePassword(
+          playerPasswordConfirmInput
+            ? playerPasswordConfirmInput.value
+            : ''
+        )
+    };
+  }
+
+  function validatePlayerRegistrationForm(data) {
+    if (!data.teamCode) {
+      return 'チーム登録コードを入力してください。';
+    }
+
+    if (!data.playerName) {
+      return '選手名を入力してください。';
+    }
+
+    if (
+      data.playerName.length < 2 ||
+      data.playerName.length > 30
+    ) {
+      return '選手名は2〜30文字で入力してください。';
+    }
+
+    if (!data.category) {
+      return 'カテゴリーを選択してください。';
+    }
+
+    return validatePassword(
+      data.password,
+      data.passwordConfirm
+    );
+  }
+
+  function clearPasswordInputs() {
+    if (playerPasswordInput) {
+      playerPasswordInput.value = '';
+    }
+
+    if (playerPasswordConfirmInput) {
+      playerPasswordConfirmInput.value = '';
+    }
+  }
+
+  async function handlePlayerRegistrationSubmit(event) {
+    event.preventDefault();
+
+    const formData =
+      readPlayerRegistrationForm();
+
+    const validationMessage =
+      validatePlayerRegistrationForm(
+        formData
+      );
+
+    if (validationMessage) {
+      setPlayerRegistrationStatus(
+        validationMessage
+      );
+
+      return;
+    }
+
+    if (!currentIdToken) {
+      setPlayerRegistrationStatus(
+        'LINE認証が必要です。LINEの選手登録ボタンから開き直してください。'
+      );
+
+      return;
+    }
+
+    if (playerRegistrationSubmit) {
+      playerRegistrationSubmit.disabled = true;
+    }
+
+    setPlayerRegistrationStatus(
+      '選手登録を行っています…'
+    );
+
+    try {
+      const result =
+        await postLinePlayerApi(
+          'linePlayer.selfRegister',
+          {
+            idToken:
+              currentIdToken,
+
+            teamCode:
+              formData.teamCode,
+
+            playerName:
+              formData.playerName,
+
+            furigana:
+              formData.furigana,
+
+            grade:
+              formData.grade,
+
+            category:
+              formData.category,
+
+            password:
+              formData.password,
+
+            passwordConfirm:
+              formData.passwordConfirm
+          }
+        );
+
+      const data =
+        getResponseData(result);
+
+      const player =
+        sanitizePlayer(
+          data.player ||
+          result.player ||
+          null
+        );
+
+      clearPasswordInputs();
+
+      playerStatus =
+        {
+          registered:
+            true,
+
+          sessionToken:
+            '',
+
+          player:
+            player,
+
+          checked:
+            true
+        };
+
+      logoutMode =
+        false;
+
+      saveCachedDetectedState();
+
+      setPlayerRegistrationStatus(
+        '選手登録が完了しました。'
+      );
+
+      setStatus(
+        '選手登録が完了しました。'
+      );
+
+      showPlayerRole();
+
+      console.info(
+        '[NINJA Player Registration]',
+        {
+          success:
+            true,
+
+          mode:
+            data.mode ||
+            result.mode ||
+            'CREATED',
+
+          playerId:
+            player.playerId,
+
+          passwordLogged:
+            false,
+
+          idTokenLogged:
+            false
+        }
+      );
+
+    } catch (error) {
+      if (
+        isExpiredLineIdTokenError(error)
+      ) {
+        clearPasswordInputs();
+        restartLineLogin(error);
+        return;
+      }
+
+      if (playerRegistrationSubmit) {
+        playerRegistrationSubmit.disabled = false;
+      }
+
+      setPlayerRegistrationStatus(
+        getErrorMessage(error) ||
+        '選手登録に失敗しました。'
+      );
+
+      console.error(
+        '[NINJA Player Registration]',
+        error
+      );
+    }
   }
 
   async function claimInvite(inviteCode) {
@@ -2203,17 +2605,48 @@
     );
   }
 
+  if (playerRegistrationForm) {
+    playerRegistrationForm.addEventListener(
+      'submit',
+      handlePlayerRegistrationSubmit
+    );
+  }
+
   if (startPlayerRegistrationButton) {
     startPlayerRegistrationButton.addEventListener(
       'click',
-      showPlayerRegistrationInfo
+      function onClickStartPlayerRegistration() {
+        if (
+          logoutMode &&
+          !currentIdToken
+        ) {
+          window.location.href =
+            './?logout=1&role=player';
+
+          return;
+        }
+
+        showPlayerRegistrationInfo();
+      }
     );
   }
 
   if (startGuardianRegistrationButton) {
     startGuardianRegistrationButton.addEventListener(
       'click',
-      showInviteRegistration
+      function onClickStartGuardianRegistration() {
+        if (
+          logoutMode &&
+          !currentIdToken
+        ) {
+          window.location.href =
+            './?logout=1&role=guardian';
+
+          return;
+        }
+
+        showInviteRegistration();
+      }
     );
   }
 
