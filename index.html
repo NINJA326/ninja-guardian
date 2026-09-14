@@ -17,11 +17,11 @@
 
   <link
     rel="stylesheet"
-    href="./css/base.css?v=step98"
+    href="./css/base.css?v=step99"
   >
 </head>
 <body>
-  <!-- STEP98: player self-registration form added -->
+  <!-- STEP99: player name split into last and first name -->
   <main
     class="app-shell"
     id="app"
@@ -282,17 +282,29 @@
             required
           >
 
-          <label for="player-name-input">
-            選手名
+          <label for="player-last-name-input">
+            苗字
           </label>
 
           <input
-            id="player-name-input"
-            name="playerName"
+            id="player-last-name-input"
+            name="lastName"
             type="text"
-            autocomplete="name"
-            maxlength="30"
-            placeholder="例：加藤 珠浬"
+            autocomplete="family-name"
+            maxlength="15"
+            required
+          >
+
+          <label for="player-first-name-input">
+            名前
+          </label>
+
+          <input
+            id="player-first-name-input"
+            name="firstName"
+            type="text"
+            autocomplete="given-name"
+            maxlength="15"
             required
           >
 
@@ -306,7 +318,6 @@
             type="text"
             autocomplete="off"
             maxlength="30"
-            placeholder="例：かとう じゅり"
           >
 
           <label for="player-grade-input">
@@ -476,8 +487,8 @@
     src="https://static.line-scdn.net/liff/edge/2/sdk.js"
   ></script>
 
-  <script src="./js/config.js?v=step98"></script>
+  <script src="./js/config.js?v=step99"></script>
   <script src="./js/api.js?v=step50"></script>
-  <script src="./js/app.js?v=step98"></script>
+  <script src="./js/app.js?v=step99"></script>
 </body>
 </html>

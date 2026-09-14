@@ -70,8 +70,11 @@
   const playerTeamCodeInput =
     document.getElementById('player-team-code');
 
-  const playerNameInput =
-    document.getElementById('player-name-input');
+  const playerLastNameInput =
+    document.getElementById('player-last-name-input');
+
+  const playerFirstNameInput =
+    document.getElementById('player-first-name-input');
 
   const playerFuriganaInput =
     document.getElementById('player-furigana-input');
@@ -122,7 +125,7 @@
     'ninjaOfficialEntryStateCacheStep50:';
 
   const STATE_CACHE_VERSION =
-    'step98-player-self-registration-form-v1';
+    'step99-player-name-split-v1';
 
   const STATE_CACHE_TTL_MS =
     7 * 24 * 60 * 60 * 1000;
@@ -1855,6 +1858,20 @@
   }
 
   function readPlayerRegistrationForm() {
+    const lastName =
+      normalizePlayerName(
+        playerLastNameInput
+          ? playerLastNameInput.value
+          : ''
+      );
+
+    const firstName =
+      normalizePlayerName(
+        playerFirstNameInput
+          ? playerFirstNameInput.value
+          : ''
+      );
+
     return {
       teamCode:
         normalizeTeamCode(
@@ -1863,11 +1880,18 @@
             : ''
         ),
 
+      lastName:
+        lastName,
+
+      firstName:
+        firstName,
+
       playerName:
         normalizePlayerName(
-          playerNameInput
-            ? playerNameInput.value
-            : ''
+          [
+            lastName,
+            firstName
+          ].filter(Boolean).join(' ')
         ),
 
       furigana:
@@ -1912,15 +1936,26 @@
       return 'チーム登録コードを入力してください。';
     }
 
-    if (!data.playerName) {
-      return '選手名を入力してください。';
+    if (!data.lastName) {
+      return '苗字を入力してください。';
+    }
+
+    if (!data.firstName) {
+      return '名前を入力してください。';
+    }
+
+    if (
+      data.lastName.length > 15 ||
+      data.firstName.length > 15
+    ) {
+      return '苗字・名前はそれぞれ15文字以内で入力してください。';
     }
 
     if (
       data.playerName.length < 2 ||
       data.playerName.length > 30
     ) {
-      return '選手名は2〜30文字で入力してください。';
+      return '選手名は合計2〜30文字で入力してください。';
     }
 
     if (!data.category) {
