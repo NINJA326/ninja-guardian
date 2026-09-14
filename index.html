@@ -17,11 +17,11 @@
 
   <link
     rel="stylesheet"
-    href="./css/base.css?v=step44"
+    href="./css/base.css?v=step98"
   >
 </head>
 <body>
-  <!-- STEP86: registration help text updated -->
+  <!-- STEP98: player self-registration form added -->
   <main
     class="app-shell"
     id="app"
@@ -253,13 +253,165 @@
         </button>
 
         <h2 id="player-registration-title">
-          選手登録について
+          選手登録
         </h2>
 
         <p class="section-lead">
-          選手登録は、選手本人のスマホLINEで進めてください。チームから案内された選手ID・パスワードを使います。
-          選手ID・パスワードがわからない場合は、コーチへ連絡してください。登録情報はチームで管理していますので、確認後に個別でお伝えします。
+          選手本人のスマホLINEで登録してください。登録後、選手IDは自動発行されます。
+          選手は自分で決めたパスワードを使って、次回以降ログインできます。
+          登録コードがわからない場合は、コーチへ連絡してください。
         </p>
+
+        <form
+          id="player-registration-form"
+          class="registration-form"
+          novalidate
+        >
+          <label for="player-team-code">
+            チーム登録コード
+          </label>
+
+          <input
+            id="player-team-code"
+            name="teamCode"
+            type="text"
+            inputmode="text"
+            autocomplete="off"
+            autocapitalize="characters"
+            maxlength="30"
+            required
+          >
+
+          <label for="player-name-input">
+            選手名
+          </label>
+
+          <input
+            id="player-name-input"
+            name="playerName"
+            type="text"
+            autocomplete="name"
+            maxlength="30"
+            placeholder="例：加藤 珠浬"
+            required
+          >
+
+          <label for="player-furigana-input">
+            ふりがな
+          </label>
+
+          <input
+            id="player-furigana-input"
+            name="furigana"
+            type="text"
+            autocomplete="off"
+            maxlength="30"
+            placeholder="例：かとう じゅり"
+          >
+
+          <label for="player-grade-input">
+            学年
+          </label>
+
+          <select
+            id="player-grade-input"
+            name="grade"
+          >
+            <option value="">
+              選択してください
+            </option>
+            <option value="小6">
+              小6
+            </option>
+            <option value="中1">
+              中1
+            </option>
+            <option value="中2">
+              中2
+            </option>
+            <option value="中3">
+              中3
+            </option>
+          </select>
+
+          <label for="player-category-input">
+            カテゴリー
+          </label>
+
+          <select
+            id="player-category-input"
+            name="category"
+            required
+          >
+            <option value="">
+              選択してください
+            </option>
+            <option value="男子U13">
+              男子U13
+            </option>
+            <option value="男子U14">
+              男子U14
+            </option>
+            <option value="男子U15">
+              男子U15
+            </option>
+            <option value="女子U13">
+              女子U13
+            </option>
+            <option value="女子U14">
+              女子U14
+            </option>
+            <option value="女子U15">
+              女子U15
+            </option>
+          </select>
+
+          <label for="player-password-input">
+            パスワード
+          </label>
+
+          <input
+            id="player-password-input"
+            name="password"
+            type="password"
+            inputmode="text"
+            autocomplete="new-password"
+            minlength="4"
+            maxlength="20"
+            required
+          >
+
+          <p class="form-help">
+            半角英数字4〜20文字で入力してください。
+          </p>
+
+          <label for="player-password-confirm-input">
+            パスワード確認
+          </label>
+
+          <input
+            id="player-password-confirm-input"
+            name="passwordConfirm"
+            type="password"
+            inputmode="text"
+            autocomplete="new-password"
+            minlength="4"
+            maxlength="20"
+            required
+          >
+
+          <button
+            id="player-registration-submit"
+            type="submit"
+          >
+            選手登録する
+          </button>
+        </form>
+
+        <p
+          id="player-registration-status"
+          aria-live="polite"
+        ></p>
       </section>
 
       <section
@@ -324,8 +476,8 @@
     src="https://static.line-scdn.net/liff/edge/2/sdk.js"
   ></script>
 
-  <script src="./js/config.js?v=step50"></script>
+  <script src="./js/config.js?v=step98"></script>
   <script src="./js/api.js?v=step50"></script>
-  <script src="./js/app.js?v=step79"></script>
+  <script src="./js/app.js?v=step98"></script>
 </body>
 </html>
