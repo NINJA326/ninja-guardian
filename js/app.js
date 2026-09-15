@@ -97,6 +97,30 @@
   const playerRegistrationStatus =
     document.getElementById('player-registration-status');
 
+  const playerRegistrationConfirmPanel =
+    document.getElementById('player-registration-confirm-panel');
+
+  const confirmPlayerName =
+    document.getElementById('confirm-player-name');
+
+  const confirmPlayerFurigana =
+    document.getElementById('confirm-player-furigana');
+
+  const confirmPlayerGrade =
+    document.getElementById('confirm-player-grade');
+
+  const confirmPlayerCategory =
+    document.getElementById('confirm-player-category');
+
+  const playerRegistrationCancelConfirm =
+    document.getElementById('player-registration-cancel-confirm');
+
+  const playerRegistrationConfirmSubmit =
+    document.getElementById('player-registration-confirm-submit');
+
+  let pendingPlayerRegistrationData =
+    null;
+
   const inviteSection =
     document.getElementById('invite-section');
 
@@ -125,7 +149,7 @@
     'ninjaOfficialEntryStateCacheStep50:';
 
   const STATE_CACHE_VERSION =
-    'step99-player-name-split-v1';
+    'step103-player-registration-confirm-v1';
 
   const STATE_CACHE_TTL_MS =
     7 * 24 * 60 * 60 * 1000;
@@ -199,6 +223,74 @@
     if (playerRegistrationStatus) {
       playerRegistrationStatus.textContent =
         message || '';
+    }
+  }
+
+  function setConfirmText(element, value) {
+    if (element) {
+      element.textContent =
+        value || '未入力';
+    }
+  }
+
+  function resetPlayerRegistrationConfirmation() {
+    pendingPlayerRegistrationData =
+      null;
+
+    hideElement(
+      playerRegistrationConfirmPanel
+    );
+
+    if (playerRegistrationSubmit) {
+      playerRegistrationSubmit.disabled = false;
+    }
+
+    if (playerRegistrationConfirmSubmit) {
+      playerRegistrationConfirmSubmit.disabled = false;
+    }
+  }
+
+  function showPlayerRegistrationConfirmation(data) {
+    pendingPlayerRegistrationData =
+      data;
+
+    setConfirmText(
+      confirmPlayerName,
+      data.playerName
+    );
+
+    setConfirmText(
+      confirmPlayerFurigana,
+      data.furigana
+    );
+
+    setConfirmText(
+      confirmPlayerGrade,
+      data.grade
+    );
+
+    setConfirmText(
+      confirmPlayerCategory,
+      data.category
+    );
+
+    if (playerRegistrationSubmit) {
+      playerRegistrationSubmit.disabled = true;
+    }
+
+    setPlayerRegistrationStatus(
+      '登録内容を確認してください。'
+    );
+
+    showElement(
+      playerRegistrationConfirmPanel
+    );
+
+    if (playerRegistrationConfirmPanel) {
+      playerRegistrationConfirmPanel.scrollIntoView({
+        block:
+          'nearest'
+      });
     }
   }
 
@@ -1607,9 +1699,7 @@
 
     setPlayerRegistrationStatus('');
 
-    if (playerRegistrationSubmit) {
-      playerRegistrationSubmit.disabled = false;
-    }
+    resetPlayerRegistrationConfirmation();
 
     showElement(playerRegistrationInfo);
 
@@ -1990,6 +2080,33 @@
       );
 
     if (validationMessage) {
+      resetPlayerRegistrationConfirmation();
+
+      setPlayerRegistrationStatus(
+        validationMessage
+      );
+
+      return;
+    }
+
+    showPlayerRegistrationConfirmation(
+      formData
+    );
+  }
+
+  async function confirmPlayerRegistration() {
+    const formData =
+      pendingPlayerRegistrationData ||
+      readPlayerRegistrationForm();
+
+    const validationMessage =
+      validatePlayerRegistrationForm(
+        formData
+      );
+
+    if (validationMessage) {
+      resetPlayerRegistrationConfirmation();
+
       setPlayerRegistrationStatus(
         validationMessage
       );
@@ -2007,6 +2124,10 @@
 
     if (playerRegistrationSubmit) {
       playerRegistrationSubmit.disabled = true;
+    }
+
+    if (playerRegistrationConfirmSubmit) {
+      playerRegistrationConfirmSubmit.disabled = true;
     }
 
     setPlayerRegistrationStatus(
@@ -2055,6 +2176,13 @@
         );
 
       clearPasswordInputs();
+
+      pendingPlayerRegistrationData =
+        null;
+
+      hideElement(
+        playerRegistrationConfirmPanel
+      );
 
       playerStatus =
         {
@@ -2113,12 +2241,17 @@
         isExpiredLineIdTokenError(error)
       ) {
         clearPasswordInputs();
+        pendingPlayerRegistrationData = null;
         restartLineLogin(error);
         return;
       }
 
       if (playerRegistrationSubmit) {
         playerRegistrationSubmit.disabled = false;
+      }
+
+      if (playerRegistrationConfirmSubmit) {
+        playerRegistrationConfirmSubmit.disabled = false;
       }
 
       setPlayerRegistrationStatus(
@@ -2132,6 +2265,7 @@
       );
     }
   }
+
 
   async function claimInvite(inviteCode) {
     if (!currentIdToken) {
@@ -2647,6 +2781,30 @@
     );
   }
 
+  if (playerRegistrationCancelConfirm) {
+    playerRegistrationCancelConfirm.addEventListener(
+      'click',
+      function onClickCancelPlayerRegistrationConfirm() {
+        resetPlayerRegistrationConfirmation();
+
+        setPlayerRegistrationStatus(
+          '内容を修正してください。'
+        );
+
+        if (playerLastNameInput) {
+          playerLastNameInput.focus();
+        }
+      }
+    );
+  }
+
+  if (playerRegistrationConfirmSubmit) {
+    playerRegistrationConfirmSubmit.addEventListener(
+      'click',
+      confirmPlayerRegistration
+    );
+  }
+
   if (startPlayerRegistrationButton) {
     startPlayerRegistrationButton.addEventListener(
       'click',
@@ -2688,7 +2846,10 @@
   if (playerRegistrationBack) {
     playerRegistrationBack.addEventListener(
       'click',
-      showRegistrationChoice
+      function onClickPlayerRegistrationBack() {
+        resetPlayerRegistrationConfirmation();
+        showRegistrationChoice();
+      }
     );
   }
 

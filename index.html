@@ -17,11 +17,11 @@
 
   <link
     rel="stylesheet"
-    href="./css/base.css?v=step99"
+    href="./css/base.css?v=step103"
   >
 </head>
 <body>
-  <!-- STEP99: player name split into last and first name -->
+  <!-- STEP103: player registration confirmation before save -->
   <main
     class="app-shell"
     id="app"
@@ -419,6 +419,67 @@
           </button>
         </form>
 
+        <div
+          id="player-registration-confirm-panel"
+          class="confirm-panel"
+          hidden
+        >
+          <h3>
+            登録内容の確認
+          </h3>
+
+          <dl class="confirm-list">
+            <div>
+              <dt>
+                選手名
+              </dt>
+              <dd id="confirm-player-name"></dd>
+            </div>
+
+            <div>
+              <dt>
+                ふりがな
+              </dt>
+              <dd id="confirm-player-furigana"></dd>
+            </div>
+
+            <div>
+              <dt>
+                学年
+              </dt>
+              <dd id="confirm-player-grade"></dd>
+            </div>
+
+            <div>
+              <dt>
+                カテゴリー
+              </dt>
+              <dd id="confirm-player-category"></dd>
+            </div>
+          </dl>
+
+          <p class="confirm-note">
+            内容に間違いがなければ登録してください。パスワードは安全のため表示しません。
+          </p>
+
+          <div class="confirm-actions">
+            <button
+              id="player-registration-cancel-confirm"
+              type="button"
+              class="secondary-button"
+            >
+              修正する
+            </button>
+
+            <button
+              id="player-registration-confirm-submit"
+              type="button"
+            >
+              この内容で登録する
+            </button>
+          </div>
+        </div>
+
         <p
           id="player-registration-status"
           aria-live="polite"
@@ -487,8 +548,8 @@
     src="https://static.line-scdn.net/liff/edge/2/sdk.js"
   ></script>
 
-  <script src="./js/config.js?v=step99"></script>
+  <script src="./js/config.js?v=step103"></script>
   <script src="./js/api.js?v=step50"></script>
-  <script src="./js/app.js?v=step99"></script>
+  <script src="./js/app.js?v=step103"></script>
 </body>
 </html>
