@@ -158,7 +158,7 @@
     'ninjaOfficialEntryStateCacheStep50:';
 
   const STATE_CACHE_VERSION =
-    'step103-player-registration-confirm-v1';
+    'step113-player-precheck-richmenu-v1';
 
   const STATE_CACHE_TTL_MS =
     7 * 24 * 60 * 60 * 1000;
@@ -1105,6 +1105,77 @@
 
     return result;
   }
+
+  async function applyPlayerRichMenuForCurrentLineNoThrow() {
+    if (!currentIdToken) {
+      return {
+        success:
+          false,
+
+        message:
+          'LINE認証情報がありません。'
+      };
+    }
+
+    try {
+      const result =
+        await postLinePlayerApi(
+          'linePlayer.richMenu.apply',
+          {
+            idToken:
+              currentIdToken
+          }
+        );
+
+      console.info(
+        '[NINJA Player RichMenu]',
+        {
+          success:
+            true,
+
+          mode:
+            getResponseData(result).mode ||
+            result.mode ||
+            '',
+
+          idTokenLogged:
+            false,
+
+          passwordLogged:
+            false
+        }
+      );
+
+      return result;
+
+    } catch (error) {
+      console.warn(
+        '[NINJA Player RichMenu]',
+        {
+          success:
+            false,
+
+          message:
+            getErrorMessage(error),
+
+          idTokenLogged:
+            false,
+
+          passwordLogged:
+            false
+        }
+      );
+
+      return {
+        success:
+          false,
+
+        message:
+          getErrorMessage(error)
+      };
+    }
+  }
+
 
   function normalizePlayerSessionResult(result) {
     if (!isOkResponse(result)) {
@@ -2441,6 +2512,57 @@
     }
   }
 
+  async function handleLogoutPlayerRegistrationEntry() {
+    setStatus(
+      '選手登録状況を確認しています…'
+    );
+
+    const freshPlayerStatus =
+      await getPlayerStatus();
+
+    playerStatus =
+      freshPlayerStatus;
+
+    guardianStatus =
+      {
+        registered:
+          false,
+
+        checked:
+          false,
+
+        players:
+          []
+      };
+
+    if (
+      freshPlayerStatus &&
+      freshPlayerStatus.registered
+    ) {
+      setStatus(
+        '選手登録済みです。選手メニューへ戻しています…'
+      );
+
+      await applyPlayerRichMenuForCurrentLineNoThrow();
+
+      saveCachedDetectedState();
+
+      logoutMode =
+        false;
+
+      showPlayerRole();
+
+      return;
+    }
+
+    setStatus(
+      'このLINEで選手登録を開始してください。'
+    );
+
+    showPlayerRegistrationInfo();
+  }
+
+
   async function applyDetectedState() {
     const isPlayerRegistered =
       !!(
@@ -2656,6 +2778,45 @@
         );
 
       if (logoutMode) {
+        if (requestedRole === 'player') {
+          await handleLogoutPlayerRegistrationEntry();
+
+          removeSessionStorageValue(
+            LINE_AUTH_RETRY_KEY
+          );
+
+          console.info(
+            '[NINJA Official Entry]',
+            {
+              liffReady:
+                true,
+
+              loggedIn:
+                true,
+
+              logoutMode:
+                true,
+
+              requestedRole:
+                requestedRole,
+
+              playerPreCheck:
+                true,
+
+              playerRegistered:
+                !!(
+                  playerStatus &&
+                  playerStatus.registered
+                ),
+
+              idTokenLogged:
+                false
+            }
+          );
+
+          return;
+        }
+
         showLogoutEntry();
 
         removeSessionStorageValue(
