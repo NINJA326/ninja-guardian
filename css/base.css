@@ -590,3 +590,12 @@ h2 {
   font-weight: 700;
   overflow-wrap: anywhere;
 }
+
+
+.primary-action {
+  border-color: var(--color-text);
+}
+
+#player-login-status {
+  margin-top: var(--space-3);
+}

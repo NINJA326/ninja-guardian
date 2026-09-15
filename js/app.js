@@ -19,11 +19,11 @@
   const playerRoleSection =
     document.getElementById('player-role-section');
 
-  const playerOpenGrowthButton =
-    document.getElementById('player-open-growth');
+  const playerLoginButton =
+    document.getElementById('player-login-button');
 
-  const playerOpenFeedbackButton =
-    document.getElementById('player-open-feedback');
+  const playerLoginStatus =
+    document.getElementById('player-login-status');
 
   const playerRolePlayerId =
     document.getElementById('player-role-player-id');
@@ -158,7 +158,7 @@
     'ninjaOfficialEntryStateCacheStep50:';
 
   const STATE_CACHE_VERSION =
-    'step117-player-status-players-sheet-v1';
+    'step124-player-login-button-v1';
 
   const STATE_CACHE_TTL_MS =
     7 * 24 * 60 * 60 * 1000;
@@ -231,6 +231,13 @@
   function setPlayerRegistrationStatus(message) {
     if (playerRegistrationStatus) {
       playerRegistrationStatus.textContent =
+        message || '';
+    }
+  }
+
+  function setPlayerLoginStatus(message) {
+    if (playerLoginStatus) {
+      playerLoginStatus.textContent =
         message || '';
     }
   }
@@ -1769,6 +1776,12 @@
       '選手登録済み'
     );
 
+    setPlayerLoginStatus('');
+
+    if (playerLoginButton) {
+      playerLoginButton.disabled = false;
+    }
+
     renderPlayerRoleDetail();
 
     showElement(playerRoleSection);
@@ -2414,6 +2427,60 @@
   }
 
 
+  async function handlePlayerLoginButtonClick() {
+    if (!currentIdToken) {
+      setPlayerLoginStatus(
+        'LINE認証が必要です。LINEの選手登録ボタンから開き直してください。'
+      );
+
+      return;
+    }
+
+    if (playerLoginButton) {
+      playerLoginButton.disabled = true;
+    }
+
+    setStatus(
+      '選手としてログインしています…'
+    );
+
+    setPlayerLoginStatus(
+      '選手用メニューへ切り替えています…'
+    );
+
+    const result =
+      await applyPlayerRichMenuForCurrentLineNoThrow();
+
+    if (
+      result &&
+      isOkResponse(result)
+    ) {
+      setStatus(
+        '選手としてログインしました。'
+      );
+
+      setPlayerLoginStatus(
+        '選手用メニューへ切り替えました。右上の×で閉じてLINEトーク画面へ戻ってください。'
+      );
+
+      return;
+    }
+
+    if (playerLoginButton) {
+      playerLoginButton.disabled = false;
+    }
+
+    setStatus(
+      '選手用メニューへの切り替えに失敗しました。'
+    );
+
+    setPlayerLoginStatus(
+      getErrorMessage(result) ||
+      '選手用メニューへの切り替えに失敗しました。時間をおいて再度お試しください。'
+    );
+  }
+
+
   async function claimInvite(inviteCode) {
     if (!currentIdToken) {
       throw new Error(
@@ -2665,10 +2732,8 @@
         };
 
       setStatus(
-        '選手登録済みです。選手メニューへ戻しています…'
+        '選手登録済み'
       );
-
-      await applyPlayerRichMenuForCurrentLineNoThrow();
 
       saveCachedDetectedState();
 
@@ -3133,21 +3198,10 @@
     );
   }
 
-  if (playerOpenGrowthButton) {
-    playerOpenGrowthButton.addEventListener(
+  if (playerLoginButton) {
+    playerLoginButton.addEventListener(
       'click',
-      function onClickPlayerGrowth() {
-        openPlayerApp('growth');
-      }
-    );
-  }
-
-  if (playerOpenFeedbackButton) {
-    playerOpenFeedbackButton.addEventListener(
-      'click',
-      function onClickPlayerFeedback() {
-        openPlayerApp('feedback');
-      }
+      handlePlayerLoginButtonClick
     );
   }
 

@@ -17,11 +17,11 @@
 
   <link
     rel="stylesheet"
-    href="./css/base.css?v=step117"
+    href="./css/base.css?v=step124"
   >
 </head>
 <body>
-  <!-- STEP117: player registration status uses players sheet -->
+  <!-- STEP124: player login button and player role action cleanup -->
   <main
     class="app-shell"
     id="app"
@@ -133,31 +133,24 @@
 
         <div class="action-grid">
           <button
-            id="player-open-growth"
-            class="action-button"
+            id="player-login-button"
+            class="action-button primary-action"
             type="button"
           >
             <span class="action-title">
-              成長記録
+              選手としてログインする
             </span>
             <span class="action-description">
-              自分の成長記録を開く
-            </span>
-          </button>
-
-          <button
-            id="player-open-feedback"
-            class="action-button"
-            type="button"
-          >
-            <span class="action-title">
-              フィードバック
-            </span>
-            <span class="action-description">
-              自分のフィードバックを開く
+              選手用メニューに切り替える
             </span>
           </button>
         </div>
+
+        <p
+          id="player-login-status"
+          class="section-lead"
+          aria-live="polite"
+        ></p>
       </section>
 
       <section
@@ -576,8 +569,8 @@
     src="https://static.line-scdn.net/liff/edge/2/sdk.js"
   ></script>
 
-  <script src="./js/config.js?v=step117"></script>
+  <script src="./js/config.js?v=step124"></script>
   <script src="./js/api.js?v=step50"></script>
-  <script src="./js/app.js?v=step117"></script>
+  <script src="./js/app.js?v=step124"></script>
 </body>
 </html>
