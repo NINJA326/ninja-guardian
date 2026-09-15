@@ -165,6 +165,10 @@ h3 {
   font-weight: 700;
 }
 
+.status-text:empty {
+  display: none;
+}
+
 .choice-section,
 .player-section,
 .player-detail-section,

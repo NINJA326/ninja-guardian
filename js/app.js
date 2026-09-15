@@ -158,7 +158,7 @@
     'ninjaOfficialEntryStateCacheStep50:';
 
   const STATE_CACHE_VERSION =
-    'step152-silent-feedback-launch-v1';
+    'step153-silent-normal-progress-v1';
 
   const STATE_CACHE_TTL_MS =
     7 * 24 * 60 * 60 * 1000;
@@ -907,7 +907,7 @@
 
     if (!launchIntent) {
       setStatus(
-        '前回情報を表示中。最新状態を確認しています…'
+        ''
       );
     }
 
@@ -2597,7 +2597,7 @@
 
   async function handleLogoutGuardianRegistrationEntry() {
     setStatus(
-      '保護者登録状況を確認しています…'
+      ''
     );
 
     removeCachedDetectedState();
@@ -2813,7 +2813,7 @@
 
   async function handleLogoutPlayerRegistrationEntry() {
     setStatus(
-      '選手登録状況を確認しています…'
+      ''
     );
 
     let registrationStatus;
@@ -2980,7 +2980,7 @@
 
   async function start() {
     setStatus(
-      '設定を確認しています…'
+      ''
     );
 
     currentIdToken = '';
@@ -3074,7 +3074,7 @@
 
     try {
       setStatus(
-        'LIFFを初期化しています…'
+        ''
       );
 
       await window.liff.init({
@@ -3083,12 +3083,12 @@
       });
 
       setStatus(
-        'LINEログイン状態を確認しています…'
+        ''
       );
 
       if (!window.liff.isLoggedIn()) {
         setStatus(
-          'LINEログインへ移動します…'
+          ''
         );
 
         window.liff.login({
@@ -3100,7 +3100,7 @@
       }
 
       setStatus(
-        'LINE認証情報を取得しています…'
+        ''
       );
 
       const idToken =
@@ -3247,9 +3247,7 @@
       await applyCachedDetectedStateIfAvailable();
 
       setStatus(
-        cachedStateShown
-          ? '最新の登録状況を確認しています…'
-          : '登録状況を確認しています…'
+        ''
       );
 
       const results =
@@ -3272,7 +3270,7 @@
         freshGuardianStatus.checked === false
       ) {
         setStatus(
-          '最新確認に時間がかかっています。前回情報を表示しています。'
+          ''
         );
 
         return;
@@ -3330,7 +3328,7 @@
 
       if (cachedStateShown) {
         setStatus(
-          '最新確認に失敗しました。前回情報を表示しています。'
+          ''
         );
 
         console.error(
