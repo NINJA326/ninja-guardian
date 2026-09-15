@@ -158,7 +158,7 @@
     'ninjaOfficialEntryStateCacheStep50:';
 
   const STATE_CACHE_VERSION =
-    'step124-player-login-button-v1';
+    'step144-guardian-entry-fresh-status-v1';
 
   const STATE_CACHE_TTL_MS =
     7 * 24 * 60 * 60 * 1000;
@@ -842,6 +842,19 @@
       removeLocalStorageValue(storageKey);
       return null;
     }
+  }
+
+  function removeCachedDetectedState() {
+    const storageKey =
+      getStateCacheStorageKey();
+
+    if (!storageKey) {
+      return;
+    }
+
+    removeLocalStorageValue(
+      storageKey
+    );
   }
 
   function isCommunicationFailureMessage(message) {
@@ -2481,6 +2494,40 @@
   }
 
 
+  async function handleLogoutGuardianRegistrationEntry() {
+    setStatus(
+      '保護者登録状況を確認しています…'
+    );
+
+    removeCachedDetectedState();
+
+    guardianStatus =
+      await getGuardianStatus();
+
+    if (
+      guardianStatus &&
+      guardianStatus.registered
+    ) {
+      setStatus(
+        '保護者登録済み'
+      );
+
+      logoutMode =
+        false;
+
+      await showGuardianRole();
+
+      return;
+    }
+
+    setStatus(
+      'このLINEで保護者登録を開始してください。'
+    );
+
+    showInviteRegistration();
+  }
+
+
   async function claimInvite(inviteCode) {
     if (!currentIdToken) {
       throw new Error(
@@ -3012,6 +3059,45 @@
                 !!(
                   playerStatus &&
                   playerStatus.registered
+                ),
+
+              idTokenLogged:
+                false
+            }
+          );
+
+          return;
+        }
+
+        if (requestedRole === 'guardian') {
+          await handleLogoutGuardianRegistrationEntry();
+
+          removeSessionStorageValue(
+            LINE_AUTH_RETRY_KEY
+          );
+
+          console.info(
+            '[NINJA Official Entry]',
+            {
+              liffReady:
+                true,
+
+              loggedIn:
+                true,
+
+              logoutMode:
+                true,
+
+              requestedRole:
+                requestedRole,
+
+              guardianPreCheck:
+                true,
+
+              guardianRegistered:
+                !!(
+                  guardianStatus &&
+                  guardianStatus.registered
                 ),
 
               idTokenLogged:
