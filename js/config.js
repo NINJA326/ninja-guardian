@@ -2,7 +2,7 @@
 
 window.NINJA_GUARDIAN_CONFIG = Object.freeze({
   APP_NAME: 'NINJA AIRS 保護者',
-  APP_VERSION: 'step147-guardian-child-select-richmenu-close',
+  APP_VERSION: 'step152-silent-feedback-launch',
   LIFF_ID: '2010789200-KayhN3KT',
 
   API_URL:

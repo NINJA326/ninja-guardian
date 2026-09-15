@@ -158,7 +158,7 @@
     'ninjaOfficialEntryStateCacheStep50:';
 
   const STATE_CACHE_VERSION =
-    'step147-guardian-child-select-richmenu-close-v1';
+    'step152-silent-feedback-launch-v1';
 
   const STATE_CACHE_TTL_MS =
     7 * 24 * 60 * 60 * 1000;
@@ -1470,10 +1470,6 @@
     if (button) {
       button.disabled = true;
     }
-
-    setStatus(
-      label + 'を開く準備をしています…'
-    );
 
     try {
       const result =
