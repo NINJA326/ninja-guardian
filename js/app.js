@@ -158,7 +158,7 @@
     'ninjaOfficialEntryStateCacheStep50:';
 
   const STATE_CACHE_VERSION =
-    'step113-player-precheck-richmenu-v1';
+    'step117-player-status-players-sheet-v1';
 
   const STATE_CACHE_TTL_MS =
     7 * 24 * 60 * 60 * 1000;
@@ -2512,16 +2512,124 @@
     }
   }
 
+  async function getPlayerRegistrationStatusByPlayersSheet() {
+    if (!currentIdToken) {
+      return {
+        registered:
+          false,
+
+        checked:
+          false,
+
+        player:
+          null,
+
+        message:
+          'LINE認証情報がありません。'
+      };
+    }
+
+    try {
+      const result =
+        await postLinePlayerApi(
+          'linePlayer.registrationStatus',
+          {
+            idToken:
+              currentIdToken
+          }
+        );
+
+      const data =
+        getResponseData(result);
+
+      return {
+        registered:
+          !!(
+            data.registered ||
+            result.registered
+          ),
+
+        checked:
+          true,
+
+        player:
+          sanitizePlayer(
+            data.player ||
+            result.player ||
+            null
+          ),
+
+        mode:
+          textOf(
+            data.mode ||
+            result.mode
+          ),
+
+        message:
+          textOf(
+            data.message ||
+            result.message
+          )
+      };
+
+    } catch (error) {
+      if (
+        isExpiredLineIdTokenError(error)
+      ) {
+        throw error;
+      }
+
+      return {
+        registered:
+          false,
+
+        checked:
+          false,
+
+        player:
+          null,
+
+        message:
+          getErrorMessage(error)
+      };
+    }
+  }
+
+
   async function handleLogoutPlayerRegistrationEntry() {
     setStatus(
       '選手登録状況を確認しています…'
     );
 
-    const freshPlayerStatus =
-      await getPlayerStatus();
+    let registrationStatus;
 
-    playerStatus =
-      freshPlayerStatus;
+    try {
+      registrationStatus =
+        await getPlayerRegistrationStatusByPlayersSheet();
+
+    } catch (error) {
+      if (
+        isExpiredLineIdTokenError(error)
+      ) {
+        restartLineLogin(error);
+        return;
+      }
+
+      registrationStatus =
+        {
+          registered:
+            false,
+
+          checked:
+            false,
+
+          player:
+            null,
+
+          message:
+            getErrorMessage(error)
+        };
+    }
 
     guardianStatus =
       {
@@ -2536,9 +2644,26 @@
       };
 
     if (
-      freshPlayerStatus &&
-      freshPlayerStatus.registered
+      registrationStatus &&
+      registrationStatus.registered
     ) {
+      playerStatus =
+        {
+          registered:
+            true,
+
+          sessionToken:
+            '',
+
+          player:
+            sanitizePlayer(
+              registrationStatus.player
+            ),
+
+          checked:
+            true
+        };
+
       setStatus(
         '選手登録済みです。選手メニューへ戻しています…'
       );
@@ -2554,6 +2679,21 @@
 
       return;
     }
+
+    playerStatus =
+      {
+        registered:
+          false,
+
+        sessionToken:
+          '',
+
+        player:
+          null,
+
+        checked:
+          true
+      };
 
     setStatus(
       'このLINEで選手登録を開始してください。'
