@@ -17,11 +17,11 @@
 
   <link
     rel="stylesheet"
-    href="./css/base.css?v=step103"
+    href="./css/base.css?v=step107"
   >
 </head>
 <body>
-  <!-- STEP103: player registration confirmation before save -->
+  <!-- STEP107: player registered detail visible -->
   <main
     class="app-shell"
     id="app"
@@ -102,6 +102,34 @@
         <p class="section-lead">
           選手として登録済みです。
         </p>
+
+        <div class="registered-player-card">
+          <dl class="registered-player-list">
+            <div>
+              <dt>
+                選手ID
+              </dt>
+              <dd id="player-role-player-id">
+              </dd>
+            </div>
+
+            <div>
+              <dt>
+                選手名
+              </dt>
+              <dd id="player-role-player-name">
+              </dd>
+            </div>
+
+            <div>
+              <dt>
+                カテゴリー
+              </dt>
+              <dd id="player-role-player-category">
+              </dd>
+            </div>
+          </dl>
+        </div>
 
         <div class="action-grid">
           <button
@@ -548,8 +576,8 @@
     src="https://static.line-scdn.net/liff/edge/2/sdk.js"
   ></script>
 
-  <script src="./js/config.js?v=step103"></script>
+  <script src="./js/config.js?v=step107"></script>
   <script src="./js/api.js?v=step50"></script>
-  <script src="./js/app.js?v=step103"></script>
+  <script src="./js/app.js?v=step107"></script>
 </body>
 </html>

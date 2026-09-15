@@ -543,3 +543,50 @@ h2 {
 .secondary-button {
   background: transparent !important;
 }
+
+
+.registered-player-card {
+  margin: var(--space-3) 0;
+  padding: var(--space-3);
+
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+
+  background: var(--color-surface);
+}
+
+.registered-player-list {
+  display: grid;
+  gap: var(--space-2);
+
+  margin: 0;
+}
+
+.registered-player-list div {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: var(--space-2);
+
+  padding-bottom: var(--space-2);
+
+  border-bottom: 1px solid var(--color-border);
+}
+
+.registered-player-list div:last-child {
+  padding-bottom: 0;
+
+  border-bottom: 0;
+}
+
+.registered-player-list dt {
+  color: var(--color-muted);
+
+  font-weight: 700;
+}
+
+.registered-player-list dd {
+  margin: 0;
+
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}

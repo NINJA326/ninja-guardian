@@ -25,6 +25,15 @@
   const playerOpenFeedbackButton =
     document.getElementById('player-open-feedback');
 
+  const playerRolePlayerId =
+    document.getElementById('player-role-player-id');
+
+  const playerRolePlayerName =
+    document.getElementById('player-role-player-name');
+
+  const playerRolePlayerCategory =
+    document.getElementById('player-role-player-category');
+
   const playerSection =
     document.getElementById('player-section');
 
@@ -304,6 +313,71 @@
     if (element) {
       element.hidden = true;
     }
+  }
+
+  function setTextContent(element, value, fallback) {
+    if (element) {
+      element.textContent =
+        textOf(value) ||
+        fallback ||
+        '未確認';
+    }
+  }
+
+  function getCurrentPlayerForRole() {
+    return sanitizePlayer(
+      playerStatus &&
+      playerStatus.player
+    );
+  }
+
+  function renderPlayerRoleDetail() {
+    const player =
+      getCurrentPlayerForRole();
+
+    setTextContent(
+      playerRolePlayerId,
+      player && player.playerId,
+      '未確認'
+    );
+
+    setTextContent(
+      playerRolePlayerName,
+      player && player.playerName,
+      '未確認'
+    );
+
+    setTextContent(
+      playerRolePlayerCategory,
+      player && player.category,
+      '未確認'
+    );
+
+    console.info(
+      '[NINJA Player Role]',
+      {
+        playerId:
+          player && player.playerId
+            ? player.playerId
+            : '',
+
+        playerName:
+          player && player.playerName
+            ? player.playerName
+            : '',
+
+        category:
+          player && player.category
+            ? player.category
+            : '',
+
+        passwordLogged:
+          false,
+
+        idTokenLogged:
+          false
+      }
+    );
   }
 
   function hideAllSections() {
@@ -1623,6 +1697,8 @@
     setStatus(
       '選手登録済み'
     );
+
+    renderPlayerRoleDetail();
 
     showElement(playerRoleSection);
   }

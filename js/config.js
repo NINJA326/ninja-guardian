@@ -2,7 +2,7 @@
 
 window.NINJA_GUARDIAN_CONFIG = Object.freeze({
   APP_NAME: 'NINJA AIRS 保護者',
-  APP_VERSION: 'step103-player-registration-confirm',
+  APP_VERSION: 'step107-player-registered-detail',
   LIFF_ID: '2010789200-KayhN3KT',
 
   API_URL:
