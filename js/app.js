@@ -158,7 +158,7 @@
     'ninjaOfficialEntryStateCacheStep50:';
 
   const STATE_CACHE_VERSION =
-    'step144-guardian-entry-fresh-status-v1';
+    'step147-guardian-child-select-richmenu-close-v1';
 
   const STATE_CACHE_TTL_MS =
     7 * 24 * 60 * 60 * 1000;
@@ -1713,7 +1713,7 @@
 
     card.addEventListener(
       'click',
-      function onClickPlayerCard() {
+      async function onClickPlayerCard() {
         if (
           launchIntent &&
           Object.prototype.hasOwnProperty.call(
@@ -1729,7 +1729,7 @@
             return;
           }
 
-          openGuardianExistingApp(
+          await openGuardianExistingApp(
             launchIntent,
             card
           );
@@ -1737,7 +1737,10 @@
           return;
         }
 
-        showGuardianPlayerDetail(player);
+        await showGuardianPlayerDetail(
+          player,
+          card
+        );
       }
     );
 
@@ -1895,7 +1898,7 @@
     }
   }
 
-  function showGuardianPlayerDetail(player) {
+  async function showGuardianPlayerDetail(player, button) {
     if (!selectPlayer(player)) {
       setStatus(
         '選手情報を確認できませんでした。'
@@ -1904,9 +1907,16 @@
       return;
     }
 
+    const playerName =
+      getPlayerName(player);
+
+    if (button) {
+      button.disabled = true;
+    }
+
     if (playerDetailName) {
       playerDetailName.textContent =
-        getPlayerName(player);
+        playerName;
     }
 
     if (playerDetailCategory) {
@@ -1917,21 +1927,71 @@
     hideAllSections();
     showElement(playerDetailSection);
 
-    renderExistingAppLinks();
+    setDetailMessage(
+      '保護者用メニューへ切り替えています…'
+    );
 
     setStatus(
-      '標準の子どもを保存しました。'
+      playerName +
+      'を標準の子どもとして保存しました。保護者用メニューへ切り替えています…'
     );
 
-    console.info(
-      '[NINJA Guardian Detail]',
-      {
-        success: true,
-        mode: 'guardian-external-launch-default-player',
-        playerId: selectedPlayerId,
-        idTokenLogged: false
+    try {
+      await applyGuardianRichMenuForSelectedChild();
+
+      setDetailMessage(
+        '保護者用メニューへ切り替えました。LINEトーク画面へ戻ります。'
+      );
+
+      setStatus(
+        '保護者用メニューへ切り替えました。LINEトーク画面へ戻ります…'
+      );
+
+      console.info(
+        '[NINJA Guardian Detail]',
+        {
+          success: true,
+          mode: 'guardian-child-selected-rich-menu-applied',
+          playerId: selectedPlayerId,
+          idTokenLogged: false
+        }
+      );
+
+      window.setTimeout(
+        function closeAfterApply() {
+          closeLineWindowOrShowFallback(
+            '保護者用メニューへ切り替えました。右上の×で閉じてLINEトーク画面へ戻ってください。'
+          );
+        },
+        600
+      );
+    } catch (error) {
+      if (
+        isExpiredLineIdTokenError(error)
+      ) {
+        restartLineLogin(error);
+        return;
       }
-    );
+
+      setDetailMessage(
+        getErrorMessage(error) ||
+        '保護者用メニューへの切り替えに失敗しました。'
+      );
+
+      setStatus(
+        getErrorMessage(error) ||
+        '保護者用メニューへの切り替えに失敗しました。'
+      );
+
+      console.error(
+        '[NINJA Guardian RichMenu Apply On Select]',
+        error
+      );
+
+      if (button) {
+        button.disabled = false;
+      }
+    }
   }
 
   function getGuardianIdForRichMenuApply() {
@@ -1983,6 +2043,51 @@
     }
 
     setLocalStorageValue(key, '1');
+  }
+
+  function closeLineWindowOrShowFallback(message) {
+    if (
+      window.liff &&
+      typeof window.liff.closeWindow === 'function'
+    ) {
+      window.liff.closeWindow();
+      return true;
+    }
+
+    setStatus(
+      message ||
+      'LINEトーク画面へ戻ってください。'
+    );
+
+    return false;
+  }
+
+  async function applyGuardianRichMenuForSelectedChild() {
+    if (!currentIdToken) {
+      throw new Error(
+        'LINE認証情報がありません。LINEの保護者登録ボタンから開き直してください。'
+      );
+    }
+
+    const result =
+      await api.post(
+        'guardian.richMenu.applyGuardian',
+        {
+          idToken:
+            currentIdToken
+        }
+      );
+
+    if (!isOkResponse(result)) {
+      throw new Error(
+        getErrorMessage(result) ||
+        '保護者用メニューへの切り替えに失敗しました。'
+      );
+    }
+
+    markGuardianRichMenuApplied();
+
+    return result;
   }
 
   async function applyGuardianRichMenuInBackground() {
